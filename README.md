@@ -1,22 +1,22 @@
 ## Stepbystep
 
-Backend for a Quizlet-like web application.
+Web application inspired by Quizlet.
 
-This project provides the server-side logic for a learning platform where users
-can create, manage, and study flashcards. The backend handles authentication,
-authorization, and core application functionality.
-
-### Features
-- User registration and login
-- Role-based access control
-- Two-factor authentication (2FA)
-- Persistent data storage using a relational database
+This project is a full-stack web application for a learning platform where users
+can create, manage, and study flashcards. 
 
 ### Tech stack
+**Backend**
 - Python
 - Flask
 - Flask-SQLAlchemy
 - Flask-Security
+- SQLite
+
+**Frontend**
+- CSS
+- JavaScript
+- HTML
 
 ### Project status
-Actively developed. New features and improvements are being added.
+Actively developed
