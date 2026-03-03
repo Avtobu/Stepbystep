@@ -16,7 +16,7 @@ def login():
             login_user(user)
             return redirect(url_for('views.home'))
         flash("Wrong credentials")
-    return "Login page"
+    return render_template("signin.html")
 
 @auth.route('/signup', methods=['GET','POST'])
 def signup():

@@ -10,7 +10,7 @@ db = SQLAlchemy()
 login_manager = LoginManager()
 
 def create_app():
-    app = Flask(__name__)
+    app = Flask(__name__, template_folder='templates')
     mail = Mail(app)
     mail.init_app(app)
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
