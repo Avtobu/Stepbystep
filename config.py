@@ -1,4 +1,5 @@
 import os
+import dotenv
 
 class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY") or "secret"
@@ -9,6 +10,6 @@ class Config:
     MAIL_SERVER = "smtp.gmail.com"
     MAIL_PORT = 587
     MAIL_USE_TLS = True
-    MAIL_USERNAME ="lifeivanna2007@gmail.com"
-    MAIL_PASSWORD = "vmsw jzbr tuqd aaix "
+    MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
+    MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
 
