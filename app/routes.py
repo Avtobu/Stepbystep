@@ -1,6 +1,10 @@
 from app import app
+from app.forms import RegistrationForm, ResetPasswordForm
 from app.forms import LoginForm
-from flask import render_template, flash, redirect, url_for
+from app.forms import ResetPasswordRequestForm
+from app.email import send_password_reset_email
+from app.forms import EditProfileForm
+from flask import render_template, flash, redirect, url_for, request
 from flask_login import current_user, login_user
 import sqlalchemy as sa
 from flask_login import logout_user,login_required
@@ -32,3 +36,80 @@ def login():
 def logout():
     logout_user()
     return redirect(url_for('index'))
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    form = RegistrationForm()
+    if form.validate_on_submit():
+        user = User(username=form.username.data, email=form.email.data)
+        user.set_password(form.password.data)
+        db.session.add(user)
+        db.session.commit()
+        flash('Congratulations, you are now a registered user!')
+        return redirect(url_for('login'))
+    return render_template('signup.html', title='Register', form=form)
+
+@app.route('/user/<username>')
+@login_required
+def user(username):
+    user = db.first_or_404(sa.select(User).where(User.username == username))
+    return render_template('acc.html', user=user)
+
+@app.route('/edit_profile', methods=['GET', 'POST'])
+@login_required
+def edit_profile():
+    form = EditProfileForm()
+    if form.validate_on_submit():
+        current_user.username = form.username.data
+        db.session.commit()
+        flash('Your changes have been saved.')
+        return redirect(url_for('edit_profile'))
+    elif request.method == 'GET':
+        form.username.data = current_user.username
+    #return render_template('edit_profile.html', title='Edit Profile',  form=form)
+    return "edit"
+
+@app.route('/reset_password_request', methods=['GET', 'POST'])
+def reset_password_request():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+
+    form = ResetPasswordRequestForm()
+
+    if form.validate_on_submit():
+        user = db.session.scalar(
+            sa.select(User).where(User.email == form.email.data)
+        )
+
+        if user:
+            send_password_reset_email(user)
+
+        flash('Check your email for instructions to reset your password')
+        return redirect(url_for('login'))
+
+    return render_template(
+        'newpass.html',
+        title='Reset Password',
+        form=form
+    )
+
+@app.route('/reset_password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+
+    user = User.verify_reset_password_token(token)
+
+    if not user:
+        return redirect(url_for('index'))
+
+    form = ResetPasswordForm()
+
+    if form.validate_on_submit():
+        user.set_password(form.password.data)
+        db.session.commit()
+
+        flash('Your password has been reset.')
+        return redirect(url_for('login'))
+
+    return render_template('confirm.html', form=form)
