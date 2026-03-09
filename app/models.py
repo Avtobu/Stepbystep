@@ -1,5 +1,6 @@
 from flask_bcrypt import generate_password_hash, check_password_hash
 from flask_login import UserMixin
+from app import login
 from . import db
 
 class User(db.Model, UserMixin):
@@ -15,3 +16,6 @@ class User(db.Model, UserMixin):
         return check_password_hash(self.password_hash, password)
 
 
+@login.user_loader
+def load_user(id):
+    return db.session.get(User, int(id))
