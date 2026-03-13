@@ -1,5 +1,8 @@
+import mail
 from flask import Flask, render_template
 from flask_login import LoginManager, login_required, current_user
+from app.config import Config
+from app.models import db, User
 
 
 def create_app():

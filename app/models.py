@@ -5,7 +5,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 db = SQLAlchemy()
 
-class User(UserMixin, db.Model):
+class User(UserMixin, db.Model):    #user class
     __tablename__ = "users"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -25,7 +25,7 @@ class User(UserMixin, db.Model):
         return check_password_hash(self.password_hash, password)
 
 
-class VerificationCode(db.Model):
+class VerificationCode(db.Model):    #maybe will remove not sure
     __tablename__ = "verification_codes"
 
     id = db.Column(db.Integer, primary_key=True)
