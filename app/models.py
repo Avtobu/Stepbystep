@@ -91,5 +91,37 @@ class Deck(db.Model):
     def __repr__(self):
         return f"<Deck {self.title}>"
 
+class Card(db.Model):
+    __tablename__ = "cards"
 
+    id = db.Column(db.Integer, primary_key=True)
+    deck_id = db.Column(db.Integer, db.ForeignKey("decks.id"), nullable=False)
+    question = db.Column(db.Text, nullable=False)
+    answer = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<Card {self.id} in deck {self.deck_id}>"
+
+
+class StudyProgress(db.Model):
+    __tablename__ = "study_progress"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    deck_id = db.Column(db.Integer, db.ForeignKey("decks.id"), nullable=False)
+    cards_studied = db.Column(db.Integer, default=0)
+    cards_correct = db.Column(db.Integer, default=0)
+    last_studied_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    __table_args__ = (db.UniqueConstraint("user_id", "deck_id", name="unique_user_deck"),)
+
+    def completion_percent(self):
+        total = self.deck.card_count()
+        if total == 0:
+            return 0
+        return round((self.cards_studied / total) * 100)
+
+    def __repr__(self):
+        return f"<StudyProgress user={self.user_id} deck={self.deck_id}>"
 
