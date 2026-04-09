@@ -2,7 +2,6 @@ from datetime import datetime, timedelta
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from app.extensions import db, login_manager
-import secrets
 
 
 class User(UserMixin, db.Model):
@@ -33,38 +32,44 @@ class User(UserMixin, db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+
 class EmailCode(db.Model):
     __tablename__ = "email_codes"
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
-    email = db.Column(db.String(120), nullable=False)
-
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     code = db.Column(db.String(6), nullable=False)
     purpose = db.Column(db.String(50), nullable=False)
-
+    new_email = db.Column(db.String(120), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     expires_at = db.Column(db.DateTime, nullable=False)
-
     is_used = db.Column(db.Boolean, default=False)
 
-    @staticmethod
-    def create(email, purpose):
-        code = str(secrets.randbelow(1000000)).zfill(6)
+    user = db.relationship("User", backref="email_codes")
 
-        record = EmailCode(
-            email=email,
-            code=code,
-            purpose=purpose,
-            expires_at=datetime.utcnow() + timedelta(minutes=10)
-        )
-
-        db.session.add(record)
-        db.session.commit()
-        return record
+    def is_expired(self):
+        return datetime.utcnow() > self.expires_at
 
     def is_valid(self):
-        return (not self.is_used) and datetime.utcnow() < self.expires_at
+        return not self.is_used and not self.is_expired()
+
+    @staticmethod
+    def create_for_user(user, purpose, expiry_minutes=15, new_email=None):
+        import secrets
+        EmailCode.query.filter_by(user_id=user.id, purpose=purpose, is_used=False).delete()
+        code = EmailCode(
+            user_id=user.id,
+            code=str(secrets.randbelow(900000) + 100000),
+            purpose=purpose,
+            new_email=new_email,
+            expires_at=datetime.utcnow() + timedelta(minutes=expiry_minutes),
+        )
+        db.session.add(code)
+        db.session.commit()
+        return code
+
+    def __repr__(self):
+        return f"<EmailCode {self.purpose} for user {self.user_id}>"
 
 
 class Deck(db.Model):
@@ -85,6 +90,7 @@ class Deck(db.Model):
 
     def __repr__(self):
         return f"<Deck {self.title}>"
+
 
 class Card(db.Model):
     __tablename__ = "cards"
@@ -119,4 +125,3 @@ class StudyProgress(db.Model):
 
     def __repr__(self):
         return f"<StudyProgress user={self.user_id} deck={self.deck_id}>"
-
