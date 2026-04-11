@@ -9,13 +9,14 @@ MAIL_DEFAULT_SENDER = os.environ.get("MAIL_DEFAULT_SENDER", "onboarding@resend.d
 
 
 def send_email(to, subject, body):
-    if not RESEND_API_KEY:
+    api_key = os.environ.get("RESEND_API_KEY")
+    if not api_key:
         raise RuntimeError("RESEND_API_KEY is not set.")
 
     response = requests.post(
         "https://api.resend.com/emails",
         headers={
-            "Authorization": f"Bearer {RESEND_API_KEY}",
+            "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
         },
         json={
