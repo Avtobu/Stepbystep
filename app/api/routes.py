@@ -483,3 +483,14 @@ def api_sync_progress():
         "cards_correct": progress.cards_correct,
         "completion_percent": progress.completion_percent(),
     }, "Progress synced.")
+
+@api_bp.route("/user/<int:user_id>", methods=["GET"])
+@csrf.exempt
+def api_get_user(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        return api_error("User not found.", 404)
+    return api_ok({
+        "username": user.username,
+        "email": user.email,
+    })
