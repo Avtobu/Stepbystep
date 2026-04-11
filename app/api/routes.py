@@ -484,6 +484,8 @@ def api_sync_progress():
         "completion_percent": progress.completion_percent(),
     }, "Progress synced.")
 
+
+
 @api_bp.route("/user/<int:user_id>", methods=["GET"])
 @csrf.exempt
 def api_get_user(user_id):
@@ -493,7 +495,9 @@ def api_get_user(user_id):
     return api_ok({
         "username": user.username,
         "email": user.email,
+        "two_factor_enabled": user.two_fa_enabled,  # ← FIX: was missing
     })
+
 
 @api_bp.route("/user/<int:user_id>", methods=["PUT"])
 @csrf.exempt
@@ -525,3 +529,71 @@ def api_update_user(user_id):
 
     db.session.commit()
     return api_ok({"username": user.username, "email": user.email}, "Profile updated.")
+
+
+
+@api_bp.route("/user/<int:user_id>/2fa/send-code", methods=["POST"])
+@csrf.exempt
+def api_2fa_send_code(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        return api_error("User not found.", 404)
+
+    if user.two_fa_enabled:
+        return api_error("2FA is already enabled.")
+
+    try:
+        code = EmailCode.create_for_user(user, purpose="2fa_setup")
+        send_verification_code(user, code.code, purpose="2fa_setup")
+        return api_ok(message="Verification code sent to your email.")
+    except Exception as e:
+        db.session.rollback()
+        return api_error(str(e), 500)
+
+
+@api_bp.route("/user/<int:user_id>/2fa/enable", methods=["POST"])
+@csrf.exempt
+def api_2fa_enable(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        return api_error("User not found.", 404)
+
+    if user.two_fa_enabled:
+        return api_error("2FA is already enabled.")
+
+    body = request.get_json()
+    if not body:
+        return api_error("JSON body required.")
+
+    code_input = body.get("code", "").strip()
+    if not code_input:
+        return api_error("code is required.")
+
+    code_record = EmailCode.query.filter_by(
+        user_id=user.id, purpose="2fa_setup", is_used=False
+    ).order_by(EmailCode.created_at.desc()).first()
+
+    if not code_record or not code_record.is_valid() or code_record.code != code_input:
+        return api_error("Invalid or expired code.")
+
+    code_record.is_used = True
+    user.two_fa_enabled = True
+    db.session.commit()
+
+    return api_ok(message="Two-factor authentication enabled successfully.")
+
+
+@api_bp.route("/user/<int:user_id>/2fa/disable", methods=["POST"])
+@csrf.exempt
+def api_2fa_disable(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        return api_error("User not found.", 404)
+
+    if not user.two_fa_enabled:
+        return api_error("2FA is not enabled.")
+
+    user.two_fa_enabled = False
+    db.session.commit()
+
+    return api_ok(message="Two-factor authentication disabled.")
