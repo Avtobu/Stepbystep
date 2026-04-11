@@ -494,3 +494,34 @@ def api_get_user(user_id):
         "username": user.username,
         "email": user.email,
     })
+
+@api_bp.route("/user/<int:user_id>", methods=["PUT"])
+@csrf.exempt
+def api_update_user(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        return api_error("User not found.", 404)
+
+    body = request.get_json()
+    if not body:
+        return api_error("JSON body required.")
+
+    username = body.get("username", "").strip()
+    email = body.get("email", "").strip().lower()
+    password = body.get("password", "").strip()
+
+    if username:
+        user.username = username
+    if email:
+        existing = User.query.filter_by(email=email).first()
+        if existing and existing.id != user.id:
+            return api_error("Email already in use.")
+        user.email = email
+    if password:
+        errors = validate_password_strength(password)
+        if errors:
+            return api_error(" ".join(errors))
+        user.set_password(password)
+
+    db.session.commit()
+    return api_ok({"username": user.username, "email": user.email}, "Profile updated.")
