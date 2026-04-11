@@ -1,6 +1,8 @@
-from flask import current_app
+import logging
 from flask_mail import Message
 from app.extensions import mail
+
+logger = logging.getLogger(__name__)
 
 
 def send_email(to, subject, body):
@@ -27,11 +29,15 @@ def send_verification_code(user, code, purpose):
         "change_password": f"Your password change confirmation code: {code}\n\nIt expires in 15 minutes.",
         "change_email": f"Your email change confirmation code: {code}\n\nIt expires in 15 minutes.",
     }
-    send_email(
-        to=user.email,
-        subject=subjects.get(purpose, "Step by Step — Verification code"),
-        body=messages.get(purpose, f"Your code: {code}"),
-    )
+    try:
+        send_email(
+            to=user.email,
+            subject=subjects.get(purpose, "Step by Step — Verification code"),
+            body=messages.get(purpose, f"Your code: {code}"),
+        )
+    except Exception as e:
+        logger.error(f"Failed to send {purpose} email to {user.email}: {e}")
+        raise RuntimeError(f"Failed to send verification email. Please check your email address or try again later.")
 
 
 def validate_password_strength(password):
