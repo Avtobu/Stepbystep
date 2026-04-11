@@ -20,5 +20,3 @@ login_manager.login_message_category = "warning"
 def unauthorized():
     if request.path.startswith("/api/"):
         return jsonify({"success": False, "error": "Unauthorized. Please log in."}), 401
-    from flask import redirect, url_for
-    return redirect(url_for("auth.login"))
