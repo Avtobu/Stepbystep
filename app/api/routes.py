@@ -713,3 +713,72 @@ def api_delete_user(user_id):
     except Exception as e:
         db.session.rollback()
         return api_error(str(e), 500)
+
+
+@api_bp.route("/user/<int:user_id>/email/request-change", methods=["POST"])
+@csrf.exempt
+def api_email_request_change(user_id):
+    """Надсилає код підтвердження на НОВУ пошту."""
+    user = User.query.get(user_id)
+    if not user:
+        return api_error("User not found.", 404)
+
+    body = request.get_json()
+    if not body:
+        return api_error("JSON body required.")
+
+    new_email = body.get("new_email", "").strip().lower()
+    if not new_email:
+        return api_error("new_email is required.")
+
+    if new_email == user.email:
+        return api_error("This is already your current email.")
+
+    existing = User.query.filter_by(email=new_email).first()
+    if existing:
+        return api_error("Email already in use.")
+
+    try:
+        code = EmailCode.create_for_user(user, purpose="change_email")
+        # Надсилаємо код на НОВУ пошту
+        send_verification_code(user, code.code, purpose="change_email", override_email=new_email)
+        return api_ok(message="Verification code sent to new email.")
+    except Exception as e:
+        db.session.rollback()
+        return api_error(str(e), 500)
+
+
+@api_bp.route("/user/<int:user_id>/email/confirm-change", methods=["POST"])
+@csrf.exempt
+def api_email_confirm_change(user_id):
+    """Перевіряє код і оновлює email."""
+    user = User.query.get(user_id)
+    if not user:
+        return api_error("User not found.", 404)
+
+    body = request.get_json()
+    if not body:
+        return api_error("JSON body required.")
+
+    code_input = body.get("code", "").strip()
+    new_email = body.get("new_email", "").strip().lower()
+
+    if not code_input or not new_email:
+        return api_error("code and new_email are required.")
+
+    code_record = EmailCode.query.filter_by(
+        user_id=user.id, purpose="change_email", is_used=False
+    ).order_by(EmailCode.created_at.desc()).first()
+
+    if not code_record or not code_record.is_valid() or code_record.code != code_input:
+        return api_error("Invalid or expired code.")
+
+    existing = User.query.filter_by(email=new_email).first()
+    if existing and existing.id != user.id:
+        return api_error("Email already in use.")
+
+    code_record.is_used = True
+    user.email = new_email
+    db.session.commit()
+
+    return api_ok({"email": user.email}, "Email updated successfully.")
