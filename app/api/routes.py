@@ -637,6 +637,16 @@ def api_2fa_enable(user_id):
 
     return api_ok(message="Two-factor authentication enabled successfully.")
 
+@api_bp.route("/me", methods=["GET"])
+@login_required
+def api_me():
+    return api_ok({
+        "id": current_user.id,
+        "username": current_user.username,
+        "email": current_user.email,
+        "two_fa_enabled": current_user.two_fa_enabled,
+    })
+
 @api_bp.route("/user/<int:user_id>/2fa/send-disable-code", methods=["POST"])
 @csrf.exempt
 def api_2fa_send_disable_code(user_id):
@@ -782,3 +792,12 @@ def api_email_confirm_change(user_id):
     db.session.commit()
 
     return api_ok({"email": user.email}, "Email updated successfully.")
+
+@api_bp.route('/me')
+@login_required
+def get_me():
+    return jsonify({
+        'username': current_user.username,
+        'email': current_user.email,
+        'user_id': current_user.id
+    })

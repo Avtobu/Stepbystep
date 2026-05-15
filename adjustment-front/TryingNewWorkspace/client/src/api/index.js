@@ -88,3 +88,8 @@ export const cardsApi = {
   /** DELETE /api/cards/:id */
   remove: (id) => api.delete(`/cards/${id}`),
 }
+
+export const userApi = {
+  /** GET /api/me — get current logged-in user info */
+  getMe: () => api.get('/me'),
+}
