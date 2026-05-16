@@ -7,3 +7,5 @@ instance/
 venv/
 ENV/
 .env
+node_modules/
+venv/
