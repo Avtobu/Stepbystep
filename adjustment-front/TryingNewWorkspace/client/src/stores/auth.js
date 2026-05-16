@@ -3,30 +3,17 @@ import { ref, computed } from 'vue'
 import { authApi, userApi } from '@/api'
 
 export const useAuthStore = defineStore('auth', () => {
-  // ── State ───────────────────────────────────────────────────────────
   const user = ref(null)
   const loading = ref(false)
   const error = ref(null)
-
   const pendingUserId = ref(null)
   const needsEmailVerification = ref(false)
   const needs2fa = ref(false)
-
-  // Tracks whether we've already tried to restore session on page load.
-  // Prevents the guard from redirecting before fetchMe() finishes.
   const sessionChecked = ref(false)
 
-  // ── Getters ─────────────────────────────────────────────────────────
   const isAuthenticated = computed(() => !!user.value)
   const username = computed(() => user.value?.username ?? '')
 
-  // ── Actions ─────────────────────────────────────────────────────────
-
-  /**
-   * Called once on app start / page refresh.
-   * Hits GET /api/me — if the Flask session cookie is still valid,
-   * restores the user; otherwise leaves user as null.
-   */
   async function fetchMe() {
     if (sessionChecked.value) return
     try {
@@ -97,9 +84,10 @@ export const useAuthStore = defineStore('auth', () => {
     loading.value = true
     error.value = null
     try {
-      const { data } = await authApi.verify2fa(code)
+      const { data } = await authApi.verify2fa(pendingUserId.value, code) // ← виправлено
       user.value = data.data ?? data.user ?? data
       needs2fa.value = false
+      pendingUserId.value = null
       sessionChecked.value = true
       return true
     } catch (e) {
@@ -110,12 +98,14 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-async function logout() {
-  user.value = null
-  sessionChecked.value = true
-  needs2fa.value = false
-  needsEmailVerification.value = false
-}
+  async function logout() {
+    user.value = null
+    sessionChecked.value = true
+    needs2fa.value = false
+    needsEmailVerification.value = false
+    pendingUserId.value = null
+  }
+
   return {
     user, loading, error,
     pendingUserId, needsEmailVerification, needs2fa,

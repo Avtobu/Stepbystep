@@ -33,6 +33,12 @@ const router = createRouter({
       component: LoginView,
       meta: { guestOnly: true }
     },
+    {
+      path: '/cabinet/2fa',
+      name: 'two-factor-auth',
+      component: TwoFactorAuthView,
+      // без requiresAuth — guard сам перевіряє pendingUserId
+    },
     // ── Protected routes ────────────────────────────────────────────
     {
       path: '/dashboard',
@@ -56,12 +62,6 @@ const router = createRouter({
       path: '/cabinet/personal-info',
       name: 'personal-info',
       component: PersonalInfoView,
-      meta: { requiresAuth: true }
-    },
-    {
-      path: '/cabinet/2fa',
-      name: 'two-factor-auth',
-      component: TwoFactorAuthView,
       meta: { requiresAuth: true }
     },
     {
@@ -99,10 +99,16 @@ router.beforeEach(async (to) => {
   const { useAuthStore } = await import('../stores/auth')
   const auth = useAuthStore()
 
-  // On first navigation (page load/refresh), check if Flask session is still alive.
-  // fetchMe() is a no-op on subsequent navigations (guarded by sessionChecked).
   if (!auth.sessionChecked) {
     await auth.fetchMe()
+  }
+
+  // Дозволити /cabinet/2fa тільки якщо є pendingUserId або юзер авторизований
+  if (to.name === 'two-factor-auth') {
+    if (!auth.pendingUserId && !auth.isAuthenticated) {
+      return { name: 'login' }
+    }
+    return true
   }
 
   if (to.meta.requiresAuth && !auth.isAuthenticated) {

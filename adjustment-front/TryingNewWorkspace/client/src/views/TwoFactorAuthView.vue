@@ -1,44 +1,75 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import { userApi } from '@/api'
 
 const router = useRouter()
-const step = ref('setup') // 'setup' | 'verify'
+const authStore = useAuthStore()
+
+// Якщо є pendingUserId — це логін з 2fa, одразу показуємо verify
+const isLoginFlow = !!authStore.pendingUserId
+const step = ref(isLoginFlow ? 'verify' : 'setup')
+
 const contact = ref('')
 const errorMsg = ref('')
-
+const isLoading = ref(false)
 const code = ref(['', '', '', '', '', ''])
 
-const goBack = () => {
-  if (step.value === 'verify') {
-    step.value = 'setup'
-  } else {
-    router.push('/cabinet')
-  }
-}
-
-const handleSendLetter = () => {
+const handleSendLetter = async () => {
   if (!contact.value) {
     errorMsg.value = 'Invalid email address'
     return
   }
   errorMsg.value = ''
-  step.value = 'verify'
+  isLoading.value = true
+  try {
+    const userId = authStore.user?.id
+    await userApi.send2faCode(userId)
+    step.value = 'verify'
+  } catch (e) {
+    errorMsg.value = e.response?.data?.error ?? 'Failed to send code'
+  } finally {
+    isLoading.value = false
+  }
 }
 
 const handleCodeInput = (index, event) => {
   const value = event.target.value
   if (value && index < 5) {
-    // move focus to next
     const nextInput = document.getElementById(`code-input-${index + 1}`)
     if (nextInput) nextInput.focus()
   }
 }
 
-const handleVerify = () => {
-  // Logic to verify
-  alert('Verified successfully!')
-  router.push('/cabinet')
+const handleVerify = async () => {
+  const fullCode = code.value.join('')
+  if (fullCode.length < 6) {
+    errorMsg.value = 'Enter all 6 digits'
+    return
+  }
+  errorMsg.value = ''
+  isLoading.value = true
+  try {
+    if (isLoginFlow) {
+      // Логін з 2fa
+      const ok = await authStore.verify2fa(fullCode)
+      if (ok) {
+        router.push('/dashboard')
+      } else {
+        errorMsg.value = authStore.error || 'Invalid code'
+      }
+    } else {
+      // Увімкнення 2fa з кабінету
+      const userId = authStore.user?.id
+      await userApi.enable2fa(userId, fullCode)
+      router.push('/cabinet')
+    }
+  } catch (e) {
+    errorMsg.value = e.response?.data?.error ?? 'Invalid code'
+  } finally {
+    isLoading.value = false
+  }
 }
 </script>
 

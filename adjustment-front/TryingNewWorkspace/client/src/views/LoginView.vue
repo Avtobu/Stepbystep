@@ -13,9 +13,11 @@ const errorMsg = ref('')
 
 const handleLogin = async () => {
   errorMsg.value = ''
-  const ok = await auth.login(email.value, password.value)
-  if (ok) {
-    // Redirect to the page user was trying to reach, or dashboard
+  const result = await auth.login(email.value, password.value)
+
+  if (result === '2fa') {
+    router.push({ name: 'two-factor-auth' })
+  } else if (result === 'ok') {
     const redirect = route.query.redirect || '/dashboard'
     router.push(redirect)
   } else {
@@ -42,10 +44,10 @@ const handleLogin = async () => {
       <form class="auth-form" @submit.prevent="handleLogin">
         <div class="input-group">
           <label>Email / Username <span class="required">*</span></label>
-          <input 
-            type="text" 
-            v-model="email" 
-            class="input-base" 
+          <input
+            type="text"
+            v-model="email"
+            class="input-base"
             placeholder="example@mail.com"
           />
         </div>
@@ -53,10 +55,10 @@ const handleLogin = async () => {
         <div class="input-group">
           <label>Password <span class="required">*</span></label>
           <div class="password-wrapper">
-            <input 
-              type="password" 
-              v-model="password" 
-              class="input-base" 
+            <input
+              type="password"
+              v-model="password"
+              class="input-base"
               placeholder="••••••••"
             />
             <span class="eye-icon">👁️</span>
@@ -82,7 +84,6 @@ const handleLogin = async () => {
   </div>
 </template>
 
-
 <style scoped>
 .auth-logo {
   display: flex;
@@ -93,16 +94,12 @@ const handleLogin = async () => {
   margin-bottom: 2rem;
   transition: transform 0.2s ease;
 }
-
 .auth-logo:hover {
   transform: scale(1.02);
 }
-
-/* Mascot unrotates and pops on hover — same as Home page */
 .auth-logo:hover .mascot-placeholder {
   transform: rotate(0deg) scale(1.08);
 }
-
 .auth-container {
   display: flex;
   justify-content: center;
@@ -110,38 +107,23 @@ const handleLogin = async () => {
   min-height: 100vh;
   padding: 2rem;
 }
-
 .auth-box {
   width: 100%;
   max-width: 480px;
   padding: 3rem 2rem;
   text-align: center;
 }
-
-.logo h2 {
-  color: var(--color-primary);
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin-bottom: 0px;
-}
-.sub-logo {
-  color: var(--color-secondary);
-  font-size: 0.9rem;
-}
-
 .title {
   font-family: var(--font-main), 'Playfair Display', serif;
   font-size: 1.8rem;
   margin-bottom: 2rem;
 }
-
 .auth-form {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
   text-align: left;
 }
-
 .input-group label {
   display: block;
   font-size: 0.9rem;
@@ -151,7 +133,6 @@ const handleLogin = async () => {
 .required {
   color: var(--color-error);
 }
-
 .password-wrapper {
   position: relative;
 }
@@ -163,7 +144,6 @@ const handleLogin = async () => {
   cursor: pointer;
   opacity: 0.6;
 }
-
 .forgot-wrapper {
   text-align: left;
   margin-top: 0.5rem;
@@ -182,7 +162,6 @@ const handleLogin = async () => {
   max-width: 300px;
   padding: 0.75rem;
 }
-
 .error-banner {
   color: var(--color-error);
   background-color: rgba(255, 0, 0, 0.07);
@@ -193,13 +172,10 @@ const handleLogin = async () => {
   text-align: center;
   margin-bottom: 0.5rem;
 }
-
 .actions {
   display: flex;
   justify-content: center;
 }
-
-
 .switch-auth {
   text-align: center;
   margin-top: 1rem;
