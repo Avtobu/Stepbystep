@@ -2,11 +2,13 @@
 import { ref, onMounted } from 'vue'
 import { userApi, authApi } from '@/api/index.js'
 
-// ── User state ────────────────────────────────────────────────────────
 const userId = ref(null)
 const user = ref({ nickname: '', email: '' })
 const loading = ref(true)
 const globalError = ref(null)
+
+// Модальне вікно підтвердження видалення
+const showDeleteModal = ref(false)
 
 onMounted(async () => {
   try {
@@ -22,17 +24,11 @@ onMounted(async () => {
   }
 })
 
-// ── Edit state machine ────────────────────────────────────────────────
-// field: null | 'nickname' | 'email' | 'password'
-// step:  'input' | 'verify'
 const editingField = ref(null)
 const editStep = ref('input')
-
 const saving = ref(false)
 const fieldError = ref('')
 const fieldSuccess = ref('')
-
-// Temp values
 const tempNickname = ref('')
 const tempEmail = ref('')
 const tempNewPassword = ref('')
@@ -45,7 +41,6 @@ function startEdit(field) {
   fieldError.value = ''
   fieldSuccess.value = ''
   verifyCode.value = ['', '', '', '', '', '']
-
   if (field === 'nickname') tempNickname.value = user.value.nickname
   if (field === 'email') tempEmail.value = ''
   if (field === 'password') { tempNewPassword.value = ''; tempConfirmPassword.value = '' }
@@ -63,7 +58,6 @@ function getCodeString() {
   return verifyCode.value.join('')
 }
 
-// ── Code input helpers ────────────────────────────────────────────────
 function handleCodeInput(index, event) {
   const val = event.target.value.replace(/\D/g, '')
   verifyCode.value[index] = val.slice(-1)
@@ -78,13 +72,11 @@ function handleCodeKeydown(index, event) {
   }
 }
 
-// ── NICKNAME ─────────────────────────────────────────────────────────
 async function saveNickname() {
   const val = tempNickname.value.trim()
   if (!val) { fieldError.value = 'Nickname cannot be empty'; return }
   if (val.length < 3) { fieldError.value = 'Minimum 3 characters'; return }
   if (val === user.value.nickname) { cancelEdit(); return }
-
   saving.value = true; fieldError.value = ''
   try {
     await userApi.updateUsername(userId.value, val)
@@ -98,14 +90,12 @@ async function saveNickname() {
   }
 }
 
-// ── EMAIL ─────────────────────────────────────────────────────────────
 async function requestEmailChange() {
   const val = tempEmail.value.trim()
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   if (!val) { fieldError.value = 'Please enter a new email'; return }
   if (!emailRegex.test(val)) { fieldError.value = 'Invalid email address'; return }
   if (val === user.value.email) { fieldError.value = 'This is already your current email'; return }
-
   saving.value = true; fieldError.value = ''
   try {
     await userApi.requestEmailChange(userId.value, val)
@@ -122,7 +112,6 @@ async function requestEmailChange() {
 async function confirmEmailChange() {
   const code = getCodeString()
   if (code.length < 6) { fieldError.value = 'Please enter the full 6-digit code'; return }
-
   saving.value = true; fieldError.value = ''
   try {
     await userApi.confirmEmailChange(userId.value, tempEmail.value.trim(), code)
@@ -136,12 +125,10 @@ async function confirmEmailChange() {
   }
 }
 
-// ── PASSWORD ──────────────────────────────────────────────────────────
 async function requestPasswordChange() {
   if (!tempNewPassword.value) { fieldError.value = 'Please enter a new password'; return }
   if (tempNewPassword.value.length < 8) { fieldError.value = 'Minimum 8 characters'; return }
   if (tempNewPassword.value !== tempConfirmPassword.value) { fieldError.value = 'Passwords do not match'; return }
-
   saving.value = true; fieldError.value = ''
   try {
     await userApi.sendPasswordCode(userId.value)
@@ -158,7 +145,6 @@ async function requestPasswordChange() {
 async function confirmPasswordChange() {
   const code = getCodeString()
   if (code.length < 6) { fieldError.value = 'Please enter the full 6-digit code'; return }
-
   saving.value = true; fieldError.value = ''
   try {
     await userApi.changePassword(userId.value, code, tempNewPassword.value)
@@ -175,20 +161,39 @@ async function handleLogout() {
   await authApi.logout().catch(() => {})
   window.location.replace('/login')
 }
+
 async function handleDeleteAccount() {
-  if (!confirm('Are you sure you want to delete your account? This cannot be undone.')) return
   try {
     await userApi.deleteAccount(userId.value)
     await authApi.logout().catch(() => {})
     window.location.replace('/login')
   } catch (err) {
     globalError.value = err?.response?.data?.error || 'Failed to delete account'
+    showDeleteModal.value = false
   }
 }
 </script>
 
 <template>
   <div class="page-container">
+    <!-- Модальне вікно підтвердження видалення -->
+    <Transition name="modal">
+      <div v-if="showDeleteModal" class="modal-overlay" @click.self="showDeleteModal = false">
+        <div class="modal-box">
+          <div class="modal-icon">🗑️</div>
+          <h2 class="modal-title">Delete account?</h2>
+          <p class="modal-text">
+            This action is <strong>permanent</strong> and cannot be undone.
+            All your decks, cards, and progress will be lost.
+          </p>
+          <div class="modal-actions">
+            <button class="modal-btn-cancel" @click="showDeleteModal = false">Cancel</button>
+            <button class="modal-btn-delete" @click="handleDeleteAccount">Yes, delete</button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
     <header class="page-header">
       <router-link to="/cabinet" class="cabinet-logo">
         <div class="mascot-placeholder cabinet-mascot">
@@ -212,17 +217,15 @@ async function handleDeleteAccount() {
 
       <div v-else class="info-form">
 
-        <!-- ── NICKNAME ── -->
+        <!-- NICKNAME -->
         <div class="field-group">
           <label>Nickname</label>
-
           <template v-if="editingField !== 'nickname'">
             <div class="input-row">
               <input type="text" :value="user.nickname" class="input-base" readonly />
-              <button class="edit-link" @click="startEdit('nickname')">Edit</button>
+              <button class="edit-link" @click="startEdit('nickname')">Edit nickname</button>
             </div>
           </template>
-
           <template v-else>
             <div class="edit-block">
               <div class="input-row">
@@ -248,18 +251,15 @@ async function handleDeleteAccount() {
           </template>
         </div>
 
-        <!-- ── EMAIL ── -->
+        <!-- EMAIL -->
         <div class="field-group">
           <label>Email</label>
-
           <template v-if="editingField !== 'email'">
             <div class="input-row">
               <input type="email" :value="user.email" class="input-base" readonly />
               <button class="edit-link" @click="startEdit('email')">Edit email</button>
             </div>
           </template>
-
-          <!-- Step 1: ввести нову пошту -->
           <template v-else-if="editStep === 'input'">
             <div class="edit-block">
               <p class="edit-hint">Enter a new address — we'll send a verification code to it</p>
@@ -283,13 +283,9 @@ async function handleDeleteAccount() {
               </div>
             </div>
           </template>
-
-          <!-- Step 2: ввести код -->
           <template v-else>
             <div class="edit-block verify-block">
-              <p class="edit-hint">
-                Code sent to <strong>{{ tempEmail }}</strong>
-              </p>
+              <p class="edit-hint">Code sent to <strong>{{ tempEmail }}</strong></p>
               <div class="code-inputs">
                 <input
                   v-for="(digit, idx) in verifyCode"
@@ -310,26 +306,21 @@ async function handleDeleteAccount() {
                 <button class="btn-save" @click="confirmEmailChange" :disabled="saving">
                   {{ saving ? 'Verifying...' : 'Confirm' }}
                 </button>
-                <button class="btn-cancel" @click="() => { editStep = 'input'; fieldError = '' }">
-                  Back
-                </button>
+                <button class="btn-cancel" @click="() => { editStep = 'input'; fieldError = '' }">Back</button>
               </div>
             </div>
           </template>
         </div>
 
-        <!-- ── PASSWORD ── -->
+        <!-- PASSWORD -->
         <div class="field-group">
           <label>Password</label>
-
           <template v-if="editingField !== 'password'">
             <div class="input-row">
               <input type="password" value="••••••••" class="input-base" readonly />
               <button class="edit-link" @click="startEdit('password')">Edit password</button>
             </div>
           </template>
-
-          <!-- Step 1: ввести новий пароль -->
           <template v-else-if="editStep === 'input'">
             <div class="edit-block">
               <p class="edit-hint">A verification code will be sent to your current email</p>
@@ -362,13 +353,9 @@ async function handleDeleteAccount() {
               </div>
             </div>
           </template>
-
-          <!-- Step 2: ввести код -->
           <template v-else>
             <div class="edit-block verify-block">
-              <p class="edit-hint">
-                Code sent to <strong>{{ user.email }}</strong>
-              </p>
+              <p class="edit-hint">Code sent to <strong>{{ user.email }}</strong></p>
               <div class="code-inputs">
                 <input
                   v-for="(digit, idx) in verifyCode"
@@ -389,25 +376,99 @@ async function handleDeleteAccount() {
                 <button class="btn-save" @click="confirmPasswordChange" :disabled="saving">
                   {{ saving ? 'Verifying...' : 'Confirm' }}
                 </button>
-                <button class="btn-cancel" @click="() => { editStep = 'input'; fieldError = '' }">
-                  Back
-                </button>
+                <button class="btn-cancel" @click="() => { editStep = 'input'; fieldError = '' }">Back</button>
               </div>
             </div>
           </template>
         </div>
-
       </div>
 
-<div class="danger-zone">
-  <button @click="handleLogout" class="btn btn-outline logout-btn">Log out</button>
-  <button @click="handleDeleteAccount" class="btn btn-outline delete-btn">Delete account</button>
-</div>
+      <div class="danger-zone">
+        <button @click="handleLogout" class="btn btn-outline logout-btn">Log out</button>
+        <button @click="showDeleteModal = true" class="btn btn-outline delete-btn">Delete account</button>
+      </div>
     </main>
   </div>
 </template>
 
 <style scoped>
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.modal-box {
+  background: #fff;
+  border-radius: 20px;
+  padding: 2.5rem 2rem;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+  animation: popIn 0.25s ease-out;
+}
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.modal-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+.modal-title {
+  font-family: var(--font-main), 'Playfair Display', serif;
+  font-size: 1.6rem;
+  color: var(--color-text);
+  margin-bottom: 0.75rem;
+}
+.modal-text {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9rem;
+  color: #666;
+  line-height: 1.6;
+  margin-bottom: 1.75rem;
+}
+.modal-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+.modal-btn-cancel {
+  padding: 0.6rem 1.5rem;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,0.15);
+  background: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.modal-btn-cancel:hover { background: rgba(0,0,0,0.04); }
+.modal-btn-delete {
+  padding: 0.6rem 1.5rem;
+  border-radius: 10px;
+  border: none;
+  background: #e53e3e;
+  color: #fff;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.15s;
+}
+.modal-btn-delete:hover { opacity: 0.88; transform: translateY(-1px); }
+
+/* Modal transition */
+.modal-enter-active, .modal-leave-active { transition: opacity 0.2s ease; }
+.modal-enter-from, .modal-leave-to { opacity: 0; }
+
+/* решта стилів без змін */
 .page-container {
   min-height: 100vh;
   padding: 3rem 2rem;
@@ -454,7 +515,6 @@ async function handleDeleteAccount() {
 .cabinet-logo:hover .cabinet-mascot { transform: rotate(0deg) scale(1.08); }
 .cabinet-logo:hover .cabinet-owl { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
 .cabinet-logo:hover .back-arrow { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-
 .content-box {
   width: 100%;
   max-width: 600px;
@@ -468,7 +528,6 @@ async function handleDeleteAccount() {
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-
 .page-title {
   font-family: var(--font-main), 'Playfair Display', serif;
   font-size: 2.2rem;
@@ -505,10 +564,7 @@ async function handleDeleteAccount() {
   width: 100%;
   justify-content: center;
 }
-.input-base {
-  flex: 1;
-  text-align: center;
-}
+.input-base { flex: 1; text-align: center; }
 .input-base:read-only { background-color: #FAFAFA; }
 .input-active {
   background-color: #fff;
@@ -530,8 +586,6 @@ async function handleDeleteAccount() {
   text-align: left;
 }
 .edit-link:hover { text-decoration: underline; }
-
-/* Edit block */
 .edit-block {
   width: 100%;
   display: flex;
@@ -543,15 +597,12 @@ async function handleDeleteAccount() {
   from { opacity: 0; transform: translateY(-6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-
 .edit-hint {
   font-family: 'Inter', sans-serif;
   font-size: 0.82rem;
   color: var(--color-text-light, #888);
   margin: 0 0 0.25rem 0.25rem;
 }
-
-/* Code inputs */
 .verify-block { align-items: center; }
 .code-inputs {
   display: flex;
@@ -576,8 +627,6 @@ async function handleDeleteAccount() {
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
-
-/* Actions */
 .action-row {
   display: flex;
   gap: 0.75rem;
@@ -610,8 +659,6 @@ async function handleDeleteAccount() {
   transition: background 0.15s ease;
 }
 .btn-cancel:hover { background-color: rgba(0,0,0,0.04); }
-
-/* Messages */
 .field-error {
   font-size: 0.82rem;
   color: var(--color-error, #e53e3e);
@@ -639,8 +686,6 @@ async function handleDeleteAccount() {
   width: 100%;
   text-align: center;
 }
-
-/* Danger zone */
 .danger-zone {
   display: flex;
   flex-direction: column;
