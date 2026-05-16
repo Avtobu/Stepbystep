@@ -792,12 +792,3 @@ def api_email_confirm_change(user_id):
     db.session.commit()
 
     return api_ok({"email": user.email}, "Email updated successfully.")
-
-@api_bp.route('/me')
-@login_required
-def get_me():
-    return jsonify({
-        'username': current_user.username,
-        'email': current_user.email,
-        'user_id': current_user.id
-    })
