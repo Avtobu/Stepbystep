@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { userApi } from '@/api/index.js'
+import { userApi, authApi } from '@/api/index.js'
 
 // ── User state ────────────────────────────────────────────────────────
 const userId = ref(null)
@@ -171,8 +171,19 @@ async function confirmPasswordChange() {
   }
 }
 
-function handleDeleteAccount() {
-  // TODO: your existing delete logic
+async function handleLogout() {
+  await authApi.logout().catch(() => {})
+  window.location.replace('/login')
+}
+async function handleDeleteAccount() {
+  if (!confirm('Are you sure you want to delete your account? This cannot be undone.')) return
+  try {
+    await userApi.deleteAccount(userId.value)
+    await authApi.logout().catch(() => {})
+    window.location.replace('/login')
+  } catch (err) {
+    globalError.value = err?.response?.data?.error || 'Failed to delete account'
+  }
 }
 </script>
 
@@ -388,9 +399,10 @@ function handleDeleteAccount() {
 
       </div>
 
-      <div class="danger-zone">
-        <button @click="handleDeleteAccount" class="btn btn-outline delete-btn">Delete account</button>
-      </div>
+<div class="danger-zone">
+  <button @click="handleLogout" class="btn btn-outline logout-btn">Log out</button>
+  <button @click="handleDeleteAccount" class="btn btn-outline delete-btn">Delete account</button>
+</div>
     </main>
   </div>
 </template>
@@ -643,4 +655,10 @@ function handleDeleteAccount() {
   color: var(--color-error);
 }
 .delete-btn:hover { background-color: rgba(255, 0, 0, 0.05); }
+.logout-btn {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  margin-bottom: 0.75rem;
+}
+.logout-btn:hover { background-color: rgba(99, 102, 241, 0.05); }
 </style>
