@@ -5,11 +5,13 @@ from app.extensions import mail
 
 logger = logging.getLogger(__name__)
 
+
 def send_email(to, subject, body):
     msg = Message(subject=subject, recipients=[to], body=body)
     mail.send(msg)
 
-def send_verification_code(user, code, purpose):
+
+def send_verification_code(user, code, purpose, override_email=None):
     subjects = {
         "register": "Step by Step — Confirm your email",
         "2fa": "Step by Step — Login verification code",
@@ -25,10 +27,11 @@ def send_verification_code(user, code, purpose):
         "change_email": f"Your email change confirmation code: {code}\n\nIt expires in 15 minutes.",
     }
     send_email(
-        to=user.email,
+        to=override_email or user.email,
         subject=subjects.get(purpose, "Step by Step — Verification code"),
         body=messages.get(purpose, f"Your code: {code}"),
     )
+
 
 def validate_password_strength(password):
     errors = []

@@ -15,7 +15,7 @@ import StudySuccessView from '../views/StudySuccessView.vue'
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    // ── Public routes (no auth needed) ─────────────────────────────
+    // ── Public routes ───────────────────────────────────────────────
     {
       path: '/',
       name: 'home',
@@ -25,7 +25,7 @@ const router = createRouter({
       path: '/signup',
       name: 'signup',
       component: SignupView,
-      meta: { guestOnly: true }  // Redirect to /dashboard if already logged in
+      meta: { guestOnly: true }
     },
     {
       path: '/login',
@@ -33,8 +33,7 @@ const router = createRouter({
       component: LoginView,
       meta: { guestOnly: true }
     },
-
-    // ── Protected routes (require login) ───────────────────────────
+    // ── Protected routes ────────────────────────────────────────────
     {
       path: '/dashboard',
       name: 'dashboard',
@@ -96,17 +95,20 @@ const router = createRouter({
 })
 
 // ── Navigation Guard ────────────────────────────────────────────────
-// NOTE: We import inside the guard to avoid circular dependency with Pinia
 router.beforeEach(async (to) => {
   const { useAuthStore } = await import('../stores/auth')
   const auth = useAuthStore()
 
-  // Page requires login but user is not authenticated
+  // On first navigation (page load/refresh), check if Flask session is still alive.
+  // fetchMe() is a no-op on subsequent navigations (guarded by sessionChecked).
+  if (!auth.sessionChecked) {
+    await auth.fetchMe()
+  }
+
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
     return { name: 'login', query: { redirect: to.fullPath } }
   }
 
-  // Page is for guests only (login/signup) but user is already logged in
   if (to.meta.guestOnly && auth.isAuthenticated) {
     return { name: 'dashboard' }
   }

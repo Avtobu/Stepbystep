@@ -15,7 +15,7 @@ onMounted(async () => {
     user.value.nickname = data.data.username
     user.value.email = data.data.email
   } catch (err) {
-    globalError.value = 'Не вдалося завантажити дані користувача'
+    globalError.value = 'Failed to load user data'
     console.error(err)
   } finally {
     loading.value = false
@@ -81,18 +81,18 @@ function handleCodeKeydown(index, event) {
 // ── NICKNAME ─────────────────────────────────────────────────────────
 async function saveNickname() {
   const val = tempNickname.value.trim()
-  if (!val) { fieldError.value = 'Нікнейм не може бути порожнім'; return }
-  if (val.length < 3) { fieldError.value = 'Мінімум 3 символи'; return }
+  if (!val) { fieldError.value = 'Nickname cannot be empty'; return }
+  if (val.length < 3) { fieldError.value = 'Minimum 3 characters'; return }
   if (val === user.value.nickname) { cancelEdit(); return }
 
   saving.value = true; fieldError.value = ''
   try {
     await userApi.updateUsername(userId.value, val)
     user.value.nickname = val
-    fieldSuccess.value = 'Нікнейм змінено!'
+    fieldSuccess.value = 'Nickname updated!'
     setTimeout(cancelEdit, 1500)
   } catch (err) {
-    fieldError.value = err?.response?.data?.error || 'Помилка при збереженні'
+    fieldError.value = err?.response?.data?.error || 'Failed to save'
   } finally {
     saving.value = false
   }
@@ -102,9 +102,9 @@ async function saveNickname() {
 async function requestEmailChange() {
   const val = tempEmail.value.trim()
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  if (!val) { fieldError.value = 'Введіть нову пошту'; return }
-  if (!emailRegex.test(val)) { fieldError.value = 'Некоректний email'; return }
-  if (val === user.value.email) { fieldError.value = 'Це вже ваша поточна пошта'; return }
+  if (!val) { fieldError.value = 'Please enter a new email'; return }
+  if (!emailRegex.test(val)) { fieldError.value = 'Invalid email address'; return }
+  if (val === user.value.email) { fieldError.value = 'This is already your current email'; return }
 
   saving.value = true; fieldError.value = ''
   try {
@@ -113,7 +113,7 @@ async function requestEmailChange() {
     verifyCode.value = ['', '', '', '', '', '']
     setTimeout(() => document.getElementById('code-input-0')?.focus(), 100)
   } catch (err) {
-    fieldError.value = err?.response?.data?.error || 'Помилка при відправці коду'
+    fieldError.value = err?.response?.data?.error || 'Failed to send verification code'
   } finally {
     saving.value = false
   }
@@ -121,16 +121,16 @@ async function requestEmailChange() {
 
 async function confirmEmailChange() {
   const code = getCodeString()
-  if (code.length < 6) { fieldError.value = 'Введіть повний 6-значний код'; return }
+  if (code.length < 6) { fieldError.value = 'Please enter the full 6-digit code'; return }
 
   saving.value = true; fieldError.value = ''
   try {
     await userApi.confirmEmailChange(userId.value, tempEmail.value.trim(), code)
     user.value.email = tempEmail.value.trim()
-    fieldSuccess.value = 'Email успішно змінено!'
+    fieldSuccess.value = 'Email updated successfully!'
     setTimeout(cancelEdit, 1500)
   } catch (err) {
-    fieldError.value = err?.response?.data?.error || 'Невірний або застарілий код'
+    fieldError.value = err?.response?.data?.error || 'Invalid or expired code'
   } finally {
     saving.value = false
   }
@@ -138,9 +138,9 @@ async function confirmEmailChange() {
 
 // ── PASSWORD ──────────────────────────────────────────────────────────
 async function requestPasswordChange() {
-  if (!tempNewPassword.value) { fieldError.value = 'Введіть новий пароль'; return }
-  if (tempNewPassword.value.length < 8) { fieldError.value = 'Мінімум 8 символів'; return }
-  if (tempNewPassword.value !== tempConfirmPassword.value) { fieldError.value = 'Паролі не збігаються'; return }
+  if (!tempNewPassword.value) { fieldError.value = 'Please enter a new password'; return }
+  if (tempNewPassword.value.length < 8) { fieldError.value = 'Minimum 8 characters'; return }
+  if (tempNewPassword.value !== tempConfirmPassword.value) { fieldError.value = 'Passwords do not match'; return }
 
   saving.value = true; fieldError.value = ''
   try {
@@ -149,7 +149,7 @@ async function requestPasswordChange() {
     verifyCode.value = ['', '', '', '', '', '']
     setTimeout(() => document.getElementById('code-input-0')?.focus(), 100)
   } catch (err) {
-    fieldError.value = err?.response?.data?.error || 'Помилка при відправці коду'
+    fieldError.value = err?.response?.data?.error || 'Failed to send verification code'
   } finally {
     saving.value = false
   }
@@ -157,15 +157,15 @@ async function requestPasswordChange() {
 
 async function confirmPasswordChange() {
   const code = getCodeString()
-  if (code.length < 6) { fieldError.value = 'Введіть повний 6-значний код'; return }
+  if (code.length < 6) { fieldError.value = 'Please enter the full 6-digit code'; return }
 
   saving.value = true; fieldError.value = ''
   try {
     await userApi.changePassword(userId.value, code, tempNewPassword.value)
-    fieldSuccess.value = 'Пароль успішно змінено!'
+    fieldSuccess.value = 'Password changed successfully!'
     setTimeout(cancelEdit, 1500)
   } catch (err) {
-    fieldError.value = err?.response?.data?.error || 'Невірний або застарілий код'
+    fieldError.value = err?.response?.data?.error || 'Invalid or expired code'
   } finally {
     saving.value = false
   }
@@ -196,7 +196,7 @@ function handleDeleteAccount() {
     <main class="content-box">
       <h1 class="page-title">Personal Information</h1>
 
-      <div v-if="loading" class="loading-state">Завантаження...</div>
+      <div v-if="loading" class="loading-state">Loading...</div>
       <div v-else-if="globalError" class="error-banner">{{ globalError }}</div>
 
       <div v-else class="info-form">
@@ -219,7 +219,7 @@ function handleDeleteAccount() {
                   type="text"
                   v-model="tempNickname"
                   class="input-base input-active"
-                  placeholder="Новий нікнейм"
+                  placeholder="New nickname"
                   autofocus
                   @keydown.enter="saveNickname"
                   @keydown.esc="cancelEdit"
@@ -229,9 +229,9 @@ function handleDeleteAccount() {
               <p v-if="fieldSuccess" class="field-success">{{ fieldSuccess }}</p>
               <div class="action-row">
                 <button class="btn-save" @click="saveNickname" :disabled="saving">
-                  {{ saving ? 'Збереження...' : 'Зберегти' }}
+                  {{ saving ? 'Saving...' : 'Save' }}
                 </button>
-                <button class="btn-cancel" @click="cancelEdit">Скасувати</button>
+                <button class="btn-cancel" @click="cancelEdit">Cancel</button>
               </div>
             </div>
           </template>
@@ -257,7 +257,7 @@ function handleDeleteAccount() {
                   type="email"
                   v-model="tempEmail"
                   class="input-base input-active"
-                  placeholder="New email"
+                  placeholder="New email address"
                   autofocus
                   @keydown.enter="requestEmailChange"
                   @keydown.esc="cancelEdit"
@@ -277,7 +277,7 @@ function handleDeleteAccount() {
           <template v-else>
             <div class="edit-block verify-block">
               <p class="edit-hint">
-                Code send to <strong>{{ tempEmail }}</strong>
+                Code sent to <strong>{{ tempEmail }}</strong>
               </p>
               <div class="code-inputs">
                 <input
@@ -297,10 +297,10 @@ function handleDeleteAccount() {
               <p v-if="fieldSuccess" class="field-success">{{ fieldSuccess }}</p>
               <div class="action-row">
                 <button class="btn-save" @click="confirmEmailChange" :disabled="saving">
-                  {{ saving ? 'Checking' : 'Confirm' }}
+                  {{ saving ? 'Verifying...' : 'Confirm' }}
                 </button>
                 <button class="btn-cancel" @click="() => { editStep = 'input'; fieldError = '' }">
-                  Назад
+                  Back
                 </button>
               </div>
             </div>
@@ -321,13 +321,13 @@ function handleDeleteAccount() {
           <!-- Step 1: ввести новий пароль -->
           <template v-else-if="editStep === 'input'">
             <div class="edit-block">
-              <p class="edit-hint">Code was sent to email</p>
+              <p class="edit-hint">A verification code will be sent to your current email</p>
               <div class="input-row">
                 <input
                   type="password"
                   v-model="tempNewPassword"
                   class="input-base input-active"
-                  placeholder="New password"
+                  placeholder="New password (min. 8 characters)"
                   autofocus
                   @keydown.esc="cancelEdit"
                 />
@@ -345,7 +345,7 @@ function handleDeleteAccount() {
               <p v-if="fieldError" class="field-error">{{ fieldError }}</p>
               <div class="action-row">
                 <button class="btn-save" @click="requestPasswordChange" :disabled="saving">
-                  {{ saving ? 'Sending' : 'Send code' }}
+                  {{ saving ? 'Sending...' : 'Send code' }}
                 </button>
                 <button class="btn-cancel" @click="cancelEdit">Cancel</button>
               </div>
@@ -356,7 +356,7 @@ function handleDeleteAccount() {
           <template v-else>
             <div class="edit-block verify-block">
               <p class="edit-hint">
-                Code was sent to <strong>{{ user.email }}</strong>
+                Code sent to <strong>{{ user.email }}</strong>
               </p>
               <div class="code-inputs">
                 <input
@@ -376,10 +376,10 @@ function handleDeleteAccount() {
               <p v-if="fieldSuccess" class="field-success">{{ fieldSuccess }}</p>
               <div class="action-row">
                 <button class="btn-save" @click="confirmPasswordChange" :disabled="saving">
-                  {{ saving ? 'Checking...' : 'Confirm' }}
+                  {{ saving ? 'Verifying...' : 'Confirm' }}
                 </button>
                 <button class="btn-cancel" @click="() => { editStep = 'input'; fieldError = '' }">
-                  Назад
+                  Back
                 </button>
               </div>
             </div>
