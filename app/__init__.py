@@ -1,9 +1,10 @@
-from flask import Flask
+from flask import Flask, send_from_directory
 from app.config import Config
 from app.extensions import db, login_manager, mail, migrate, csrf
+import os
 
 def create_app(config_class=Config):
-    app = Flask(__name__, static_folder="../dist", static_url_path="")
+    app = Flask(__name__, static_folder="../adjustment-front/TryingNewWorkspace/client/dist", static_url_path="")
     app.config.from_object(config_class)
     db.init_app(app)
     login_manager.init_app(app)
@@ -19,7 +20,7 @@ def create_app(config_class=Config):
     def serve(path):
         if path.startswith("api/"):
             return {"error": "Not found"}, 404
-        dist_dir = os.path.join(app.root_path, "../dist")
+        dist_dir = os.path.join(app.root_path, "../adjustment-front/TryingNewWorkspace/client/dist")
         if path and os.path.exists(os.path.join(dist_dir, path)):
             return send_from_directory(dist_dir, path)
         return send_from_directory(dist_dir, "index.html")
