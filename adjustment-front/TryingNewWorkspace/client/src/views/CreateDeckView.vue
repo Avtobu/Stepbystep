@@ -1,24 +1,24 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
 import axios from 'axios'
 
 const router = useRouter()
-const auth = useAuthStore()
-
+const saving = ref(false)
 const deckName = ref('')
 const deckDescription = ref('')
-const saving = ref(false)
-
 const cards = ref([
-  { id: Date.now(),     question: '', isCorrect: true  },
+  { id: Date.now(), question: '', isCorrect: true },
   { id: Date.now() + 1, question: '', isCorrect: false },
-  { id: Date.now() + 2, question: '', isCorrect: true  },
+  { id: Date.now() + 2, question: '', isCorrect: true }
 ])
 
 const addCard = () => {
-  cards.value.push({ id: Date.now(), question: '', isCorrect: true })
+  cards.value.push({
+    id: Date.now(),
+    question: '',
+    isCorrect: true
+  })
 }
 
 const removeCard = (index) => {
@@ -33,25 +33,24 @@ const saveDeck = async () => {
 
   saving.value = true
   try {
-    // 1. Створити деку
+    // 1. Create the deck
     const deckRes = await axios.post('/api/decks', {
       title: deckName.value.trim(),
-      description: deckDescription.value.trim(),
+      description: deckDescription.value.trim()
     })
-    const deckId = deckRes.data.data.id
+    const newDeckId = deckRes.data.data.id
 
-    // 2. Додати картки
-    const validCards = cards.value.filter(c => c.question.trim())
-    await Promise.all(
-      validCards.map(c =>
-        axios.post(`/api/decks/${deckId}/cards`, {
+    // 2. Save each card (answer = "correct" or "wrong" based on isCorrect)
+    const cardPromises = cards.value
+      .filter(c => c.question.trim())
+      .map(c =>
+        axios.post(`/api/decks/${newDeckId}/cards`, {
           question: c.question.trim(),
-          answer: c.isCorrect ? 'Correct' : 'Wrong',
+          answer: c.isCorrect ? 'correct' : 'wrong'
         })
       )
-    )
+    await Promise.all(cardPromises)
 
-    alert(`Deck "${deckName.value}" saved with ${validCards.length} cards!`)
     router.push('/dashboard')
   } catch (err) {
     alert(err.response?.data?.error || 'Failed to save deck.')
@@ -63,8 +62,7 @@ const saveDeck = async () => {
 
 <template>
   <div class="page-container">
-    
-    <!-- Navbar (same as Dashboard but without search) -->
+
     <header class="deck-header">
       <router-link to="/dashboard" class="logo">
         <div class="mascot-placeholder">
@@ -75,9 +73,8 @@ const saveDeck = async () => {
           <span class="logo-subtitle">Learn with Flashcards</span>
         </div>
       </router-link>
-
       <router-link to="/cabinet" class="profile-icon" title="My Cabinet">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
           <circle cx="12" cy="7" r="4"></circle>
         </svg>
@@ -87,48 +84,43 @@ const saveDeck = async () => {
     <main class="deck-form">
       <h1 class="page-title">Create your deck</h1>
 
-      <!-- Editor Layout (Meta + Cards & Sidebar) -->
       <div class="editor-layout">
-        
-        <!-- Main Column (Centered content) -->
         <div class="main-column">
-          <!-- Deck Meta Info -->
           <div class="deck-meta">
-            <input 
-              type="text" 
-              v-model="deckName" 
-              placeholder="Deck name" 
+            <input
+              type="text"
+              v-model="deckName"
+              placeholder="Deck name"
               class="deck-name-input"
             />
-            <input 
-              type="text" 
-              v-model="deckDescription" 
-              placeholder="Description" 
+            <input
+              type="text"
+              v-model="deckDescription"
+              placeholder="Description"
               class="deck-desc-input"
             />
           </div>
 
-          <!-- Cards List -->
           <div class="cards-list">
             <transition-group name="list">
-              <div 
-                class="card-item-wrapper" 
-                v-for="(card, index) in cards" 
+              <div
+                class="card-item-wrapper"
+                v-for="(card, index) in cards"
                 :key="card.id"
               >
                 <div class="card-box">
                   <button class="delete-card-btn" @click="removeCard(index)" title="Remove card">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                       <path d="M3 6h18M19 6V20a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14zm-3 0V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2h8z" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                   </button>
-                  
+
                   <div class="fields-row">
                     <div class="field-col">
                       <label>Question</label>
-                      <textarea 
-                        v-model="card.question" 
-                        placeholder="Enter question" 
+                      <textarea
+                        v-model="card.question"
+                        placeholder="Enter question"
                         class="card-input"
                         rows="2"
                       ></textarea>
@@ -136,26 +128,25 @@ const saveDeck = async () => {
                     <div class="field-col toggle-col">
                       <label>Is this statement Correct or Wrong?</label>
                       <div class="answer-toggle">
-                        <button 
-                          class="toggle-btn" 
+                        <button
+                          class="toggle-btn"
                           :class="{ 'active-correct': card.isCorrect === true }"
                           @click="card.isCorrect = true"
                         >Correct</button>
-                        <button 
-                          class="toggle-btn" 
+                        <button
+                          class="toggle-btn"
                           :class="{ 'active-wrong': card.isCorrect === false }"
                           @click="card.isCorrect = false"
                         >Wrong</button>
                       </div>
                     </div>
                   </div>
-                </div> <!-- /card-box -->
-              </div> <!-- /card-item-wrapper -->
+                </div>
+              </div>
             </transition-group>
-          </div> <!-- /cards-list -->
-        </div> <!-- /main-column -->
+          </div>
+        </div>
 
-        <!-- Sidebar Actions -->
         <div class="actions-sidebar">
           <div class="add-action" @click="addCard" title="Add new card">
             <button class="add-card-btn">
@@ -163,18 +154,14 @@ const saveDeck = async () => {
             </button>
             <span class="action-label">Add card</span>
           </div>
-
-          <button class="btn btn-outline save-btn" @click="saveDeck">
-            Save
+          <button class="btn save-btn" @click="saveDeck" :disabled="saving">
+            {{ saving ? 'Saving...' : 'Save' }}
           </button>
         </div>
-
       </div>
     </main>
-
   </div>
 </template>
-
 
 <style scoped>
 .page-container {
@@ -186,7 +173,6 @@ const saveDeck = async () => {
   position: relative;
   align-items: center;
 }
-
 @media (max-width: 768px) {
   .page-container {
     height: auto;
@@ -196,7 +182,6 @@ const saveDeck = async () => {
   }
 }
 
-/* --- Header / Navbar --- */
 .deck-header {
   display: flex;
   justify-content: space-between;
@@ -205,7 +190,6 @@ const saveDeck = async () => {
   width: 100%;
 }
 
-/* --- Main Form area --- */
 .deck-form {
   display: flex;
   flex-direction: column;
@@ -216,6 +200,11 @@ const saveDeck = async () => {
   animation: fadeIn 0.4s ease-out;
 }
 
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 .page-title {
   font-family: var(--font-main), 'Playfair Display', serif;
   font-size: 2.2rem;
@@ -224,7 +213,6 @@ const saveDeck = async () => {
   text-align: center;
 }
 
-/* --- Editor Layout (Main Col + Sidebar) --- */
 .editor-layout {
   display: flex;
   width: 100%;
@@ -241,7 +229,7 @@ const saveDeck = async () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  max-width: 800px; /* Force the grid to match */
+  max-width: 800px;
   min-height: 0;
 }
 
@@ -252,7 +240,6 @@ const saveDeck = async () => {
   }
 }
 
-/* --- Deck Meta (Title & Desc) --- */
 .deck-meta {
   display: flex;
   flex-direction: column;
@@ -300,7 +287,6 @@ const saveDeck = async () => {
   border-color: #CCCCCC;
 }
 
-/* --- Cards List --- */
 .cards-list {
   flex: 1;
   display: flex;
@@ -313,9 +299,7 @@ const saveDeck = async () => {
 }
 
 @media (max-width: 768px) {
-  .cards-list {
-    overflow-y: visible;
-  }
+  .cards-list { overflow-y: visible; }
 }
 
 .card-item-wrapper {
@@ -326,26 +310,21 @@ const saveDeck = async () => {
   transition: all 0.3s ease;
 }
 
-.list-enter-active, .list-leave-active {
-  transition: all 0.4s ease;
-}
-.list-enter-from, .list-leave-to {
-  opacity: 0;
-  transform: translateY(20px);
-}
+.list-enter-active, .list-leave-active { transition: all 0.4s ease; }
+.list-enter-from, .list-leave-to { opacity: 0; transform: translateY(20px); }
 
 .card-box {
   flex: 1;
   background-color: rgba(255, 255, 255, 0.9);
-  border: 2px solid #C084FC; /* Brighter purple/blue border */
+  border: 2px solid #C084FC;
   border-radius: 32px;
   padding: 2rem 3rem;
   position: relative;
   box-shadow: 0 10px 25px rgba(0,0,0,0.03);
 }
 
-.card-item-wrapper:active .card-box, .card-item-wrapper:focus-within .card-box {
-  border-color: #38BDF8; /* subtle active cyan effect per figma */
+.card-item-wrapper:focus-within .card-box {
+  border-color: #38BDF8;
 }
 
 .delete-card-btn {
@@ -362,7 +341,6 @@ const saveDeck = async () => {
 .delete-card-btn:hover {
   opacity: 1;
   transform: scale(1.1);
-  color: var(--color-error);
 }
 
 .fields-row {
@@ -372,9 +350,7 @@ const saveDeck = async () => {
 }
 
 @media (max-width: 768px) {
-  .fields-row {
-    flex-direction: column;
-  }
+  .fields-row { flex-direction: column; }
 }
 
 .field-col {
@@ -437,30 +413,27 @@ const saveDeck = async () => {
 }
 
 .toggle-btn.active-correct {
-  background-color: #22c55e; /* Green */
+  background-color: #22c55e;
   color: white;
   box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3);
 }
 
 .toggle-btn.active-wrong {
-  background-color: #ef4444; /* Red */
+  background-color: #ef4444;
   color: white;
   box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
 }
 
-/* --- Sidebar Actions --- */
 .actions-sidebar {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5rem; /* Large gap between add and save button */
+  gap: 5rem;
   min-width: 150px;
 }
 
 @media (max-width: 1024px) {
   .actions-sidebar {
-    position: relative;
-    top: 0;
     flex-direction: row;
     width: 100%;
     justify-content: space-between;
@@ -506,17 +479,29 @@ const saveDeck = async () => {
   font-size: 1.2rem;
 }
 
+/* ✅ Purple Save button */
 .save-btn {
   padding: 0.8rem 2.5rem;
-  border-color: #38BDF8; /* Cyan outline */
-  color: var(--color-text);
+  border: none;
+  border-radius: 12px;
+  background-color: var(--color-primary, #8C52FF);
+  color: #FFFFFF;
+  font-family: 'Inter', sans-serif;
   font-size: 1.1rem;
-  border-width: 1.5px;
-  background-color: rgba(255, 255, 255, 0.5);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(140, 82, 255, 0.35);
 }
 
-.save-btn:hover {
-  background-color: #38BDF8;
-  color: #FFFFFF;
+.save-btn:hover:not(:disabled) {
+  background-color: #7a3ff0;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(140, 82, 255, 0.45);
+}
+
+.save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 </style>

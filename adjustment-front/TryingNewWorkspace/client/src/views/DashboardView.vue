@@ -1,17 +1,57 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import axios from 'axios'
 
 const searchQuery = ref('')
+const decks = ref([])
+const loading = ref(true)
+const error = ref(null)
 
-const decks = ref([
-  { id: 1, name: 'Spanish Verbs', description: 'Essential regular and irregular verbs.', cardsCount: 120, lastRepetition: '2 hours ago' },
-  { id: 2, name: 'React Fundamentals', description: 'Hooks, state, and props basics.', cardsCount: 45, lastRepetition: '1 day ago' }
-])
+onMounted(async () => {
+  try {
+    const res = await axios.get('/api/decks')
+    // Map API response to the shape the template expects
+    decks.value = res.data.data.map(d => ({
+      id: d.id,
+      name: d.title,
+      description: d.description || '',
+      cardsCount: d.card_count,
+      lastRepetition: d.updated_at
+        ? formatRelativeTime(d.updated_at)
+        : 'Never'
+    }))
+  } catch (err) {
+    error.value = err.response?.data?.error || 'Failed to load decks.'
+  } finally {
+    loading.value = false
+  }
+})
+
+const filteredDecks = computed(() => {
+  if (!searchQuery.value.trim()) return decks.value
+  const q = searchQuery.value.toLowerCase()
+  return decks.value.filter(
+    d => d.name.toLowerCase().includes(q) || d.description.toLowerCase().includes(q)
+  )
+})
+
+function formatRelativeTime(isoString) {
+  const date = new Date(isoString)
+  const now = new Date()
+  const diffMs = now - date
+  const diffMin = Math.floor(diffMs / 60000)
+  if (diffMin < 1) return 'Just now'
+  if (diffMin < 60) return `${diffMin} minute${diffMin > 1 ? 's' : ''} ago`
+  const diffH = Math.floor(diffMin / 60)
+  if (diffH < 24) return `${diffH} hour${diffH > 1 ? 's' : ''} ago`
+  const diffD = Math.floor(diffH / 24)
+  return `${diffD} day${diffD > 1 ? 's' : ''} ago`
+}
 </script>
 
 <template>
   <div class="dashboard-container">
-    
+
     <!-- Header -->
     <header class="dashboard-header">
       <router-link to="/" class="logo">
@@ -25,17 +65,17 @@ const decks = ref([
       </router-link>
 
       <div class="search-bar">
-        <input 
-          type="text" 
-          v-model="searchQuery" 
-          placeholder="Search your decks..." 
+        <input
+          type="text"
+          v-model="searchQuery"
+          placeholder="Search your decks..."
           class="input-base search-input"
         />
         <span class="search-icon">🔍</span>
       </div>
 
       <router-link to="/cabinet" class="profile-icon" title="My Cabinet">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
           <circle cx="12" cy="7" r="4"></circle>
         </svg>
@@ -44,38 +84,60 @@ const decks = ref([
 
     <!-- Main Content -->
     <main class="dashboard-content">
-      <div class="decks-grid">
-        
+
+      <!-- Loading state -->
+      <div v-if="loading" class="state-msg">Loading your decks...</div>
+
+      <!-- Error state -->
+      <div v-else-if="error" class="state-msg state-error">{{ error }}</div>
+
+      <!-- Decks grid -->
+      <div v-else class="decks-grid">
+
         <!-- Deck Cards -->
-        <div v-for="deck in decks" :key="deck.id" class="deck-card">
+        <div v-for="deck in filteredDecks" :key="deck.id" class="deck-card">
           <div class="deck-actions">
-            <router-link :to="'/deck/' + deck.id + '/study'" class="icon-btn play-btn" title="Study Deck">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <!-- ▶ Play button → Study mode -->
+            <router-link
+              :to="'/deck/' + deck.id + '/study'"
+              class="icon-btn play-btn"
+              title="Study Deck"
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M8 5v14l11-7z" />
               </svg>
             </router-link>
-            <router-link :to="'/deck/' + deck.id + '/manage'" class="icon-btn edit-btn" title="Manage Deck">
+
+            <!-- ✏ Edit button → Manage/edit deck -->
+            <router-link
+              :to="'/deck/' + deck.id + '/manage'"
+              class="icon-btn edit-btn"
+              title="Edit Deck"
+            >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
               </svg>
             </router-link>
           </div>
-          
+
           <h2 class="deck-name">{{ deck.name }}</h2>
           <p class="deck-desc">{{ deck.description }}</p>
           <div class="deck-footer">
             <span class="stat">Cards: {{ deck.cardsCount }}</span>
-            <span class="stat">Date of last repetition: <br/>{{ deck.lastRepetition }}</span>
+            <span class="stat">Last studied:<br/>{{ deck.lastRepetition }}</span>
           </div>
+        </div>
+
+        <!-- Empty search result -->
+        <div v-if="!loading && filteredDecks.length === 0 && searchQuery" class="state-msg">
+          No decks match "{{ searchQuery }}"
         </div>
 
         <!-- Add Deck CTA -->
         <div class="add-deck-container">
           <span class="make-more-text">Make more!</span>
-          <router-link to="/decks/create" class="add-btn">
-            +
-          </router-link>
+          <router-link to="/decks/create" class="add-btn">+</router-link>
         </div>
 
       </div>
@@ -83,7 +145,6 @@ const decks = ref([
 
   </div>
 </template>
-
 
 <style scoped>
 .dashboard-container {
@@ -150,6 +211,22 @@ const decks = ref([
   animation: fadeIn 0.4s ease-out forwards;
 }
 
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.state-msg {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.1rem;
+  color: var(--color-text-light, #888);
+  margin-top: 4rem;
+}
+
+.state-error {
+  color: #ef4444;
+}
+
 .decks-grid {
   display: flex;
   flex-wrap: wrap;
@@ -159,6 +236,7 @@ const decks = ref([
   justify-content: center;
 }
 
+/* --- Deck Card --- */
 .deck-card {
   width: 260px;
   min-height: 380px;
@@ -178,6 +256,7 @@ const decks = ref([
   transform: translateY(-5px);
 }
 
+/* ▶ and ✏ action buttons */
 .deck-actions {
   position: absolute;
   top: 1.2rem;
@@ -197,6 +276,7 @@ const decks = ref([
   border-radius: 50%;
   transition: all 0.2s ease;
   background-color: rgba(255,255,255,0.1);
+  text-decoration: none;
 }
 
 .icon-btn:hover {
@@ -206,7 +286,7 @@ const decks = ref([
 }
 
 .play-btn svg {
-  margin-left: 3px; /* visual center for play icon */
+  margin-left: 3px;
 }
 
 .deck-name {
@@ -214,9 +294,8 @@ const decks = ref([
   font-size: 1.25rem;
   font-weight: 700;
   margin-top: 1rem;
-  margin-bottom: 2rem;
   line-height: 1.2;
-  margin: 0;
+  margin-bottom: 0;
 }
 
 .deck-desc {
@@ -226,6 +305,7 @@ const decks = ref([
   flex: 1;
   line-height: 1.5;
   margin-bottom: 1.5rem;
+  margin-top: 0.75rem;
 }
 
 .deck-footer {
@@ -238,7 +318,7 @@ const decks = ref([
   opacity: 0.85;
 }
 
-/* Add CTA */
+/* --- Add Deck CTA --- */
 .add-deck-container {
   display: flex;
   flex-direction: column;

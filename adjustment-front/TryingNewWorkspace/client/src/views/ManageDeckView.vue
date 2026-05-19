@@ -1,43 +1,74 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import axios from 'axios'
 
 const router = useRouter()
 const route = useRoute()
 
 const deckId = route.params.id
-const deckName = ref(`Deck Name #${deckId}`)
+const deckName = ref('')
+const saving = ref(false)
 
-const cards = ref([
-  { id: 1, question: 'Is Vue.js a progressive JavaScript framework?', isCorrect: true },
-  { id: 2, question: 'Does v-show remove the element from the DOM?', isCorrect: false },
-  { id: 3, question: 'Can you use the Composition API with <script setup>?', isCorrect: true },
-  { id: 4, question: 'Is v-model used for one-way data binding?', isCorrect: false },
-  { id: 5, question: 'Does a ref take an inner value and return a reactive object?', isCorrect: true }
-])
+const cards = ref([])
+
+onMounted(async () => {
+  try {
+    const [deckRes, cardsRes] = await Promise.all([
+      axios.get(`/api/decks/${deckId}`),
+      axios.get(`/api/decks/${deckId}/cards`)
+    ])
+    deckName.value = deckRes.data.data.title
+    cards.value = cardsRes.data.data.map(c => ({
+      id: c.id,
+      question: c.question,
+      isCorrect: c.answer === 'correct',
+      isNew: false
+    }))
+  } catch (err) {
+    alert(err.response?.data?.error || 'Failed to load deck.')
+    router.push('/dashboard')
+  }
+})
 
 const addCard = () => {
   cards.value.push({
     id: Date.now(),
     question: '',
-    isCorrect: true
+    isCorrect: true,
+    isNew: true
   })
 }
 
 const removeCard = (index) => {
   cards.value.splice(index, 1)
 }
+
 const saveDeck = async () => {
+  if (!deckName.value.trim()) {
+    alert('Please enter a deck name.')
+    return
+  }
+
   saving.value = true
   try {
-    // Оновити назву деки
+    // Update deck title
     await axios.put(`/api/decks/${deckId}`, {
-      title: deckName.value.trim(),
+      title: deckName.value.trim()
     })
 
-    // Тут також можна синхронізувати картки якщо треба
+    // Save new cards (existing cards would need a full sync strategy;
+    // here we save only newly added ones with isNew flag)
+    const newCards = cards.value.filter(c => c.isNew && c.question.trim())
+    await Promise.all(
+      newCards.map(c =>
+        axios.post(`/api/decks/${deckId}/cards`, {
+          question: c.question.trim(),
+          answer: c.isCorrect ? 'correct' : 'wrong'
+        })
+      )
+    )
 
-    alert(`Deck "${deckName.value}" updated!`)
     router.push('/dashboard')
   } catch (err) {
     alert(err.response?.data?.error || 'Failed to update deck.')
@@ -50,7 +81,6 @@ const saveDeck = async () => {
 <template>
   <div class="page-container">
 
-    <!-- Navbar — same as CreateDeckView -->
     <header class="deck-header">
       <router-link to="/dashboard" class="logo">
         <div class="mascot-placeholder">
@@ -63,7 +93,7 @@ const saveDeck = async () => {
       </router-link>
 
       <router-link to="/cabinet" class="profile-icon" title="My Cabinet">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
           <circle cx="12" cy="7" r="4"></circle>
         </svg>
@@ -73,12 +103,9 @@ const saveDeck = async () => {
     <main class="deck-form">
       <h1 class="page-title">Edit deck</h1>
 
-      <!-- Editor Layout -->
       <div class="editor-layout">
 
-        <!-- Main Column: deck name + cards list -->
         <div class="main-column">
-          <!-- Deck name -->
           <div class="deck-meta">
             <input
               type="text"
@@ -88,7 +115,6 @@ const saveDeck = async () => {
             />
           </div>
 
-          <!-- Cards List -->
           <div class="cards-list">
             <transition-group name="list">
               <div
@@ -98,7 +124,7 @@ const saveDeck = async () => {
               >
                 <div class="card-box">
                   <button class="delete-card-btn" @click="removeCard(index)" title="Remove card">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                       <path d="M3 6h18M19 6V20a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14zm-3 0V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2h8z" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                   </button>
@@ -135,7 +161,6 @@ const saveDeck = async () => {
           </div>
         </div>
 
-        <!-- Sidebar Actions -->
         <div class="actions-sidebar">
           <div class="add-action" @click="addCard" title="Add new card">
             <button class="add-card-btn">
@@ -144,8 +169,8 @@ const saveDeck = async () => {
             <span class="action-label">Add card</span>
           </div>
 
-          <button class="btn btn-outline save-btn" @click="saveDeck">
-            Save
+          <button class="save-btn" @click="saveDeck" :disabled="saving">
+            {{ saving ? 'Saving...' : 'Save' }}
           </button>
         </div>
 
@@ -154,7 +179,6 @@ const saveDeck = async () => {
 
   </div>
 </template>
-
 
 <style scoped>
 .page-container {
@@ -176,7 +200,6 @@ const saveDeck = async () => {
   }
 }
 
-/* --- Navbar --- */
 .deck-header {
   display: flex;
   justify-content: space-between;
@@ -185,7 +208,6 @@ const saveDeck = async () => {
   width: 100%;
 }
 
-/* --- Main Form --- */
 .deck-form {
   display: flex;
   flex-direction: column;
@@ -209,7 +231,6 @@ const saveDeck = async () => {
   text-align: center;
 }
 
-/* --- Editor Layout --- */
 .editor-layout {
   display: flex;
   width: 100%;
@@ -237,7 +258,6 @@ const saveDeck = async () => {
   }
 }
 
-/* --- Deck Name --- */
 .deck-meta {
   display: flex;
   flex-direction: column;
@@ -266,7 +286,6 @@ const saveDeck = async () => {
   box-shadow: 0 4px 15px rgba(140, 82, 255, 0.1);
 }
 
-/* --- Cards List --- */
 .cards-list {
   flex: 1;
   display: flex;
@@ -321,7 +340,6 @@ const saveDeck = async () => {
 .delete-card-btn:hover {
   opacity: 1;
   transform: scale(1.1);
-  color: var(--color-error);
 }
 
 .fields-row {
@@ -405,7 +423,6 @@ const saveDeck = async () => {
   box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
 }
 
-/* --- Sidebar --- */
 .actions-sidebar {
   display: flex;
   flex-direction: column;
@@ -416,8 +433,6 @@ const saveDeck = async () => {
 
 @media (max-width: 1024px) {
   .actions-sidebar {
-    position: relative;
-    top: 0;
     flex-direction: row;
     width: 100%;
     justify-content: space-between;
@@ -463,17 +478,29 @@ const saveDeck = async () => {
   font-size: 1.2rem;
 }
 
+/* ✅ Purple Save button */
 .save-btn {
   padding: 0.8rem 2.5rem;
-  border-color: #38BDF8;
-  color: var(--color-text);
+  border: none;
+  border-radius: 12px;
+  background-color: var(--color-primary, #8C52FF);
+  color: #FFFFFF;
+  font-family: 'Inter', sans-serif;
   font-size: 1.1rem;
-  border-width: 1.5px;
-  background-color: rgba(255, 255, 255, 0.5);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(140, 82, 255, 0.35);
 }
 
-.save-btn:hover {
-  background-color: #38BDF8;
-  color: #FFFFFF;
+.save-btn:hover:not(:disabled) {
+  background-color: #7a3ff0;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(140, 82, 255, 0.45);
+}
+
+.save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 </style>
