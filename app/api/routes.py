@@ -1,5 +1,5 @@
 from datetime import datetime
-from flask import request, jsonify
+from flask import request, jsonify, send_from_directory
 from flask_login import login_user, logout_user, login_required, current_user
 from app.api import api_bp
 from app.extensions import db, csrf
@@ -792,3 +792,8 @@ def api_email_confirm_change(user_id):
     db.session.commit()
 
     return api_ok({"email": user.email}, "Email updated successfully.")
+
+@api_bp.route('/', defaults={'path': ''})
+@api_bp.route('/<path:path>')
+def catch_all(path):
+    return send_from_directory(api_bp.static_folder, 'index.html')
