@@ -1,37 +1,63 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import axios from 'axios'
 
 const router = useRouter()
+const auth = useAuthStore()
 
 const deckName = ref('')
 const deckDescription = ref('')
+const saving = ref(false)
 
 const cards = ref([
-  { id: Date.now(), question: '', isCorrect: true },
+  { id: Date.now(),     question: '', isCorrect: true  },
   { id: Date.now() + 1, question: '', isCorrect: false },
-  { id: Date.now() + 2, question: '', isCorrect: true }
+  { id: Date.now() + 2, question: '', isCorrect: true  },
 ])
 
 const addCard = () => {
-  cards.value.push({
-    id: Date.now(),
-    question: '',
-    isCorrect: true
-  })
+  cards.value.push({ id: Date.now(), question: '', isCorrect: true })
 }
 
 const removeCard = (index) => {
   cards.value.splice(index, 1)
 }
 
-const saveDeck = () => {
-  if (!deckName.value) {
-    alert("Please enter a deck name.")
+const saveDeck = async () => {
+  if (!deckName.value.trim()) {
+    alert('Please enter a deck name.')
     return
   }
-  alert(`Deck "${deckName.value}" saved with ${cards.value.length} cards!`)
-  router.push('/dashboard')
+
+  saving.value = true
+  try {
+    // 1. Створити деку
+    const deckRes = await axios.post('/api/decks', {
+      title: deckName.value.trim(),
+      description: deckDescription.value.trim(),
+    })
+    const deckId = deckRes.data.data.id
+
+    // 2. Додати картки
+    const validCards = cards.value.filter(c => c.question.trim())
+    await Promise.all(
+      validCards.map(c =>
+        axios.post(`/api/decks/${deckId}/cards`, {
+          question: c.question.trim(),
+          answer: c.isCorrect ? 'Correct' : 'Wrong',
+        })
+      )
+    )
+
+    alert(`Deck "${deckName.value}" saved with ${validCards.length} cards!`)
+    router.push('/dashboard')
+  } catch (err) {
+    alert(err.response?.data?.error || 'Failed to save deck.')
+  } finally {
+    saving.value = false
+  }
 }
 </script>
 

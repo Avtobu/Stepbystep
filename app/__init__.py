@@ -20,7 +20,8 @@ def create_app(config_class=Config):
     def serve(path):
         if path.startswith("api/"):
             return {"error": "Not found"}, 404
-        dist_dir = os.path.join(app.root_path, "../adjustment-front/TryingNewWorkspace/client/dist")
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        dist_dir = os.path.join(base_dir, "adjustment-front", "TryingNewWorkspace", "client", "dist")
         if path and os.path.exists(os.path.join(dist_dir, path)):
             return send_from_directory(dist_dir, path)
         return send_from_directory(dist_dir, "index.html")

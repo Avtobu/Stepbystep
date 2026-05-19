@@ -1,13 +1,15 @@
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { userApi, authApi } from '@/api/index.js'
+import leftArrow from '@/assets/LeftArrow.png'
+
+const router = useRouter()
 
 const userId = ref(null)
 const user = ref({ nickname: '', email: '' })
 const loading = ref(true)
 const globalError = ref(null)
-
-// Модальне вікно підтвердження видалення
 const showDeleteModal = ref(false)
 
 onMounted(async () => {
@@ -158,25 +160,38 @@ async function confirmPasswordChange() {
 }
 
 async function handleLogout() {
-  await authApi.logout().catch(() => {})
-  window.location.replace('/login')
+  try {
+    await authApi.logout()
+  } catch {
+    // ignore
+  }
+  router.push('/login')
 }
 
 async function handleDeleteAccount() {
+  // Step 1: delete account
   try {
     await userApi.deleteAccount(userId.value)
-    await authApi.logout().catch(() => {})
-    window.location.replace('/login')
   } catch (err) {
     globalError.value = err?.response?.data?.error || 'Failed to delete account'
     showDeleteModal.value = false
+    return
   }
+
+  // Step 2: logout (non-blocking — account is already gone)
+  try {
+    await authApi.logout()
+  } catch {
+    // ignore — session may already be invalidated
+  }
+
+  // Step 3: always redirect
+  router.push('/login')
 }
 </script>
 
 <template>
   <div class="page-container">
-    <!-- Модальне вікно підтвердження видалення -->
     <Transition name="modal">
       <div v-if="showDeleteModal" class="modal-overlay" @click.self="showDeleteModal = false">
         <div class="modal-box">
@@ -199,7 +214,7 @@ async function handleDeleteAccount() {
         <div class="mascot-placeholder cabinet-mascot">
           <span class="owl-icon cabinet-owl">🎓</span>
           <span class="back-arrow">
-            <img src="/src/assets/LeftArrow.png" alt="Back" class="arrow-img" />
+            <img :src="leftArrow" alt="Back" class="arrow-img" />
           </span>
         </div>
         <div class="logo-text">
@@ -213,10 +228,13 @@ async function handleDeleteAccount() {
       <h1 class="page-title">Personal Information</h1>
 
       <div v-if="loading" class="loading-state">Loading...</div>
-      <div v-else-if="globalError" class="error-banner">{{ globalError }}</div>
+
+      <div v-else-if="globalError" class="error-banner">
+        {{ globalError }}
+        <button class="retry-btn" @click="globalError = null; $router.go(0)">Retry</button>
+      </div>
 
       <div v-else class="info-form">
-
         <!-- NICKNAME -->
         <div class="field-group">
           <label>Nickname</label>
@@ -392,7 +410,6 @@ async function handleDeleteAccount() {
 </template>
 
 <style scoped>
-/* Modal */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -417,10 +434,7 @@ async function handleDeleteAccount() {
   from { opacity: 0; transform: scale(0.92); }
   to   { opacity: 1; transform: scale(1); }
 }
-.modal-icon {
-  font-size: 2.5rem;
-  margin-bottom: 1rem;
-}
+.modal-icon { font-size: 2.5rem; margin-bottom: 1rem; }
 .modal-title {
   font-family: var(--font-main), 'Playfair Display', serif;
   font-size: 1.6rem;
@@ -434,11 +448,7 @@ async function handleDeleteAccount() {
   line-height: 1.6;
   margin-bottom: 1.75rem;
 }
-.modal-actions {
-  display: flex;
-  gap: 1rem;
-  justify-content: center;
-}
+.modal-actions { display: flex; gap: 1rem; justify-content: center; }
 .modal-btn-cancel {
   padding: 0.6rem 1.5rem;
   border-radius: 10px;
@@ -463,12 +473,9 @@ async function handleDeleteAccount() {
   transition: opacity 0.15s, transform 0.15s;
 }
 .modal-btn-delete:hover { opacity: 0.88; transform: translateY(-1px); }
-
-/* Modal transition */
 .modal-enter-active, .modal-leave-active { transition: opacity 0.2s ease; }
 .modal-enter-from, .modal-leave-to { opacity: 0; }
 
-/* решта стилів без змін */
 .page-container {
   min-height: 100vh;
   padding: 3rem 2rem;
@@ -515,6 +522,7 @@ async function handleDeleteAccount() {
 .cabinet-logo:hover .cabinet-mascot { transform: rotate(0deg) scale(1.08); }
 .cabinet-logo:hover .cabinet-owl { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
 .cabinet-logo:hover .back-arrow { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+
 .content-box {
   width: 100%;
   max-width: 600px;
@@ -685,7 +693,23 @@ async function handleDeleteAccount() {
   border-radius: 8px;
   width: 100%;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
 }
+.retry-btn {
+  background: none;
+  border: 1px solid var(--color-error, #e53e3e);
+  color: var(--color-error, #e53e3e);
+  border-radius: 6px;
+  padding: 0.3rem 1rem;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.retry-btn:hover { background: rgba(229, 62, 62, 0.08); }
 .danger-zone {
   display: flex;
   flex-direction: column;

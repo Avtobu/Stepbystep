@@ -27,10 +27,23 @@ const addCard = () => {
 const removeCard = (index) => {
   cards.value.splice(index, 1)
 }
+const saveDeck = async () => {
+  saving.value = true
+  try {
+    // Оновити назву деки
+    await axios.put(`/api/decks/${deckId}`, {
+      title: deckName.value.trim(),
+    })
 
-const saveDeck = () => {
-  alert(`Deck "${deckName.value}" saved with ${cards.value.length} cards!`)
-  router.push('/dashboard')
+    // Тут також можна синхронізувати картки якщо треба
+
+    alert(`Deck "${deckName.value}" updated!`)
+    router.push('/dashboard')
+  } catch (err) {
+    alert(err.response?.data?.error || 'Failed to update deck.')
+  } finally {
+    saving.value = false
+  }
 }
 </script>
 
