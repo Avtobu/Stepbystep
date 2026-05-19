@@ -13,6 +13,8 @@ const confirmPassword = ref('')
 const passwordStrength = ref('')
 const errorMsg = ref('')
 const verifyCode = ref('')
+const showPassword = ref(false)
+const showConfirmPassword = ref(false)
 
 const checkPassword = () => {
   if (password.value.length === 0) {
@@ -38,7 +40,6 @@ const handleRegister = async () => {
   if (!result) {
     errorMsg.value = auth.error || 'Registration failed'
   }
-  // If result === 'verify', auth.needsEmailVerification becomes true — template handles it
 }
 
 const handleVerifyEmail = async () => {
@@ -69,69 +70,73 @@ const handleVerifyEmail = async () => {
       <template v-if="!auth.needsEmailVerification">
         <h1 class="title">Sign up</h1>
 
-      <form class="auth-form" @submit.prevent="handleRegister">
-        <div class="input-group">
-          <label>Username <span class="required">*</span></label>
-          <input 
-            type="text" 
-            v-model="username" 
-            class="input-base" 
-            placeholder="johndoe"
-          />
-        </div>
-
-        <div class="input-group">
-          <label>Email <span class="required">*</span></label>
-          <input 
-            type="email" 
-            v-model="email" 
-            class="input-base" 
-            placeholder="example@mail.com"
-          />
-        </div>
-
-        <div class="input-group">
-          <label>Password <span class="required">*</span></label>
-          <div class="password-wrapper">
-            <input 
-              type="password" 
-              v-model="password" 
-              class="input-base" 
-              :class="{ 'input-error': passwordStrength }"
-              @input="checkPassword"
-              placeholder="••••••••"
+        <form class="auth-form" @submit.prevent="handleRegister">
+          <div class="input-group">
+            <label>Username <span class="required">*</span></label>
+            <input
+              type="text"
+              v-model="username"
+              class="input-base"
+              placeholder="johndoe"
             />
-            <span class="eye-icon">👁️</span>
           </div>
-          <span v-if="passwordStrength" class="error-msg">{{ passwordStrength }}</span>
-          <p class="hint-msg">Password must contain 1 uppercase letter and 1 special character</p>
-        </div>
 
-        <div class="input-group">
-          <label>Confirm Password <span class="required">*</span></label>
-          <div class="password-wrapper">
-            <input 
-              type="password" 
-              v-model="confirmPassword" 
-              class="input-base" 
-              placeholder="••••••••"
+          <div class="input-group">
+            <label>Email <span class="required">*</span></label>
+            <input
+              type="email"
+              v-model="email"
+              class="input-base"
+              placeholder="example@mail.com"
             />
-            <span class="eye-icon">👁️</span>
           </div>
-        </div>
 
-        <p v-if="errorMsg" class="error-msg">{{ errorMsg }}</p>
+          <div class="input-group">
+            <label>Password <span class="required">*</span></label>
+            <div class="password-wrapper">
+              <input
+                :type="showPassword ? 'text' : 'password'"
+                v-model="password"
+                class="input-base"
+                :class="{ 'input-error': passwordStrength }"
+                @input="checkPassword"
+                placeholder="••••••••"
+              />
+              <span class="eye-icon" @click="showPassword = !showPassword">
+                {{ showPassword ? '🙈' : '👁️' }}
+              </span>
+            </div>
+            <span v-if="passwordStrength" class="error-msg">{{ passwordStrength }}</span>
+            <p class="hint-msg">Password must contain 1 uppercase letter and 1 special character</p>
+          </div>
 
-        <div class="actions">
-          <button class="btn btn-primary create-btn" :disabled="auth.loading">
-            {{ auth.loading ? 'Creating account...' : 'Create an account' }}
-          </button>
-        </div>
+          <div class="input-group">
+            <label>Confirm Password <span class="required">*</span></label>
+            <div class="password-wrapper">
+              <input
+                :type="showConfirmPassword ? 'text' : 'password'"
+                v-model="confirmPassword"
+                class="input-base"
+                placeholder="••••••••"
+              />
+              <span class="eye-icon" @click="showConfirmPassword = !showConfirmPassword">
+                {{ showConfirmPassword ? '🙈' : '👁️' }}
+              </span>
+            </div>
+          </div>
 
-        <p class="switch-auth">
-          Already have an account? <router-link to="/login">Log in</router-link>
-        </p>
-      </form>
+          <p v-if="errorMsg" class="error-msg">{{ errorMsg }}</p>
+
+          <div class="actions">
+            <button class="btn btn-primary create-btn" :disabled="auth.loading">
+              {{ auth.loading ? 'Creating account...' : 'Create an account' }}
+            </button>
+          </div>
+
+          <p class="switch-auth">
+            Already have an account? <router-link to="/login">Log in</router-link>
+          </p>
+        </form>
       </template>
 
       <!-- Step 2: Email Verification -->
@@ -175,16 +180,12 @@ const handleVerifyEmail = async () => {
   margin-bottom: 2rem;
   transition: transform 0.2s ease;
 }
-
 .auth-logo:hover {
   transform: scale(1.02);
 }
-
-/* Mascot unrotates and pops on hover — same as Home page */
 .auth-logo:hover .mascot-placeholder {
   transform: rotate(0deg) scale(1.08);
 }
-
 .auth-container {
   display: flex;
   justify-content: center;
@@ -192,27 +193,23 @@ const handleVerifyEmail = async () => {
   min-height: 100vh;
   padding: 2rem;
 }
-
 .auth-box {
   width: 100%;
   max-width: 480px;
   padding: 3rem 2rem;
   text-align: center;
 }
-
 .title {
   font-family: var(--font-main), 'Playfair Display', serif;
   font-size: 1.8rem;
   margin-bottom: 2rem;
 }
-
 .auth-form {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
   text-align: left;
 }
-
 .input-group label {
   display: block;
   font-family: 'Inter', sans-serif;
@@ -223,7 +220,6 @@ const handleVerifyEmail = async () => {
 .required {
   color: var(--color-error);
 }
-
 .password-wrapper {
   position: relative;
 }
@@ -234,14 +230,16 @@ const handleVerifyEmail = async () => {
   transform: translateY(-50%);
   cursor: pointer;
   opacity: 0.6;
+  user-select: none;
 }
-
+.eye-icon:hover {
+  opacity: 1;
+}
 .actions {
   display: flex;
   flex-direction: column;
   align-items: center;
 }
-
 .switch-auth {
   text-align: center;
   margin-top: 1rem;
@@ -255,7 +253,6 @@ const handleVerifyEmail = async () => {
 .switch-auth a:hover {
   text-decoration: underline;
 }
-
 .error-msg {
   color: var(--color-error);
   font-size: 0.85rem;
@@ -272,7 +269,6 @@ const handleVerifyEmail = async () => {
   max-width: 300px;
   padding: 0.75rem;
 }
-
 .verify-hint {
   font-family: 'Inter', sans-serif;
   font-size: 0.95rem;

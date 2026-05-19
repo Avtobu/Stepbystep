@@ -1,10 +1,12 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { userApi, authApi } from '@/api/index.js'
+import { userApi } from '@/api/index.js'
+import { useAuthStore } from '@/stores/auth'
 import leftArrow from '@/assets/LeftArrow.png'
 
 const router = useRouter()
+const auth = useAuthStore()
 
 const userId = ref(null)
 const user = ref({ nickname: '', email: '' })
@@ -160,16 +162,11 @@ async function confirmPasswordChange() {
 }
 
 async function handleLogout() {
-  try {
-    await authApi.logout()
-  } catch {
-    // ignore
-  }
+  await auth.logout()
   router.push('/login')
 }
 
 async function handleDeleteAccount() {
-  // Step 1: delete account
   try {
     await userApi.deleteAccount(userId.value)
   } catch (err) {
@@ -177,15 +174,7 @@ async function handleDeleteAccount() {
     showDeleteModal.value = false
     return
   }
-
-  // Step 2: logout (non-blocking — account is already gone)
-  try {
-    await authApi.logout()
-  } catch {
-    // ignore — session may already be invalidated
-  }
-
-  // Step 3: always redirect
+  await auth.logout()
   router.push('/login')
 }
 </script>

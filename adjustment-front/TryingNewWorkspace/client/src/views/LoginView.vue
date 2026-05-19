@@ -10,6 +10,7 @@ const auth = useAuthStore()
 const email = ref('')
 const password = ref('')
 const errorMsg = ref('')
+const showPassword = ref(false)
 
 const handleLogin = async () => {
   errorMsg.value = ''
@@ -56,12 +57,14 @@ const handleLogin = async () => {
           <label>Password <span class="required">*</span></label>
           <div class="password-wrapper">
             <input
-              type="password"
+              :type="showPassword ? 'text' : 'password'"
               v-model="password"
               class="input-base"
               placeholder="••••••••"
             />
-            <span class="eye-icon">👁️</span>
+            <span class="eye-icon" @click="showPassword = !showPassword">
+              {{ showPassword ? '🙈' : '👁️' }}
+            </span>
           </div>
           <div class="forgot-wrapper">
             <a href="#" class="forgot-link">Forgot password?</a>
@@ -143,6 +146,10 @@ const handleLogin = async () => {
   transform: translateY(-50%);
   cursor: pointer;
   opacity: 0.6;
+  user-select: none;
+}
+.eye-icon:hover {
+  opacity: 1;
 }
 .forgot-wrapper {
   text-align: left;

@@ -100,8 +100,13 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function logout() {
+    try {
+      await authApi.logout()
+    } catch (_) {
+      // ignore
+    }
     user.value = null
-    sessionChecked.value = true
+    sessionChecked.value = false
     needs2fa.value = false
     needsEmailVerification.value = false
     pendingUserId.value = null
