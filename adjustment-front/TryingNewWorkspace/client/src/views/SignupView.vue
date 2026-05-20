@@ -102,7 +102,8 @@ const handleVerifyEmail = async () => {
                 @input="checkPassword"
                 placeholder="••••••••"
               />
-              <span class="eye-icon" @click="showPassword = !showPassword">
+              <!-- ВИПРАВЛЕННЯ #6: @mousedown.prevent замість @click -->
+              <span class="eye-icon" @mousedown.prevent="showPassword = !showPassword">
                 {{ showPassword ? '🙈' : '👁️' }}
               </span>
             </div>
@@ -119,7 +120,8 @@ const handleVerifyEmail = async () => {
                 class="input-base"
                 placeholder="••••••••"
               />
-              <span class="eye-icon" @click="showConfirmPassword = !showConfirmPassword">
+              <!-- ВИПРАВЛЕННЯ #6: @mousedown.prevent замість @click -->
+              <span class="eye-icon" @mousedown.prevent="showConfirmPassword = !showConfirmPassword">
                 {{ showConfirmPassword ? '🙈' : '👁️' }}
               </span>
             </div>

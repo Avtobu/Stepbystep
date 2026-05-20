@@ -14,6 +14,10 @@ const loading = ref(true)
 const globalError = ref(null)
 const showDeleteModal = ref(false)
 
+// ВИПРАВЛЕННЯ #10: додано поле пароля та помилки для модалки видалення
+const deletePassword = ref('')
+const deleteError = ref('')
+
 onMounted(async () => {
   try {
     const { data } = await userApi.getMe()
@@ -166,32 +170,54 @@ async function handleLogout() {
   router.push('/login')
 }
 
+// ВИПРАВЛЕННЯ #10: перевіряємо пароль перед видаленням акаунту
 async function handleDeleteAccount() {
+  deleteError.value = ''
+  if (!deletePassword.value) {
+    deleteError.value = 'Please enter your password to confirm'
+    return
+  }
   try {
-    await userApi.deleteAccount(userId.value)
+    await userApi.deleteAccount(userId.value, deletePassword.value)
   } catch (err) {
-    globalError.value = err?.response?.data?.error || 'Failed to delete account'
-    showDeleteModal.value = false
+    deleteError.value = err?.response?.data?.error || 'Incorrect password. Please try again.'
     return
   }
   await auth.logout()
   router.push('/login')
+}
+
+// ВИПРАВЛЕННЯ #10: скидаємо поля при закритті модалки
+function closeDeleteModal() {
+  showDeleteModal.value = false
+  deletePassword.value = ''
+  deleteError.value = ''
 }
 </script>
 
 <template>
   <div class="page-container">
     <Transition name="modal">
-      <div v-if="showDeleteModal" class="modal-overlay" @click.self="showDeleteModal = false">
+      <!-- ВИПРАВЛЕННЯ #10: оновлена модалка з полем пароля -->
+      <div v-if="showDeleteModal" class="modal-overlay" @click.self="closeDeleteModal">
         <div class="modal-box">
           <div class="modal-icon">🗑️</div>
           <h2 class="modal-title">Delete account?</h2>
           <p class="modal-text">
             This action is <strong>permanent</strong> and cannot be undone.
             All your decks, cards, and progress will be lost.
+            Enter your password to confirm.
           </p>
+          <input
+            type="password"
+            v-model="deletePassword"
+            class="input-base delete-password-input"
+            placeholder="Enter your password"
+            @keydown.enter="handleDeleteAccount"
+          />
+          <p v-if="deleteError" class="delete-error">{{ deleteError }}</p>
           <div class="modal-actions">
-            <button class="modal-btn-cancel" @click="showDeleteModal = false">Cancel</button>
+            <button class="modal-btn-cancel" @click="closeDeleteModal">Cancel</button>
             <button class="modal-btn-delete" @click="handleDeleteAccount">Yes, delete</button>
           </div>
         </div>
@@ -435,9 +461,21 @@ async function handleDeleteAccount() {
   font-size: 0.9rem;
   color: #666;
   line-height: 1.6;
-  margin-bottom: 1.75rem;
+  margin-bottom: 1.25rem;
 }
-.modal-actions { display: flex; gap: 1rem; justify-content: center; }
+/* ВИПРАВЛЕННЯ #10: стилі для поля пароля і помилки в модалці */
+.delete-password-input {
+  width: 100%;
+  margin-bottom: 0.5rem;
+  text-align: center;
+}
+.delete-error {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.82rem;
+  color: #e53e3e;
+  margin-bottom: 1rem;
+}
+.modal-actions { display: flex; gap: 1rem; justify-content: center; margin-top: 1.25rem; }
 .modal-btn-cancel {
   padding: 0.6rem 1.5rem;
   border-radius: 10px;

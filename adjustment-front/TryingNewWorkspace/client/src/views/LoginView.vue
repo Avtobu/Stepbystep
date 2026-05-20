@@ -7,14 +7,15 @@ const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
 
-const email = ref('')
+// ВИПРАВЛЕННЯ #7: перейменовано з email на identifier щоб підтримувати і username і email
+const identifier = ref('')
 const password = ref('')
 const errorMsg = ref('')
 const showPassword = ref(false)
 
 const handleLogin = async () => {
   errorMsg.value = ''
-  const result = await auth.login(email.value, password.value)
+  const result = await auth.login(identifier.value, password.value)
 
   if (result === '2fa') {
     router.push({ name: 'two-factor-auth' })
@@ -45,11 +46,12 @@ const handleLogin = async () => {
       <form class="auth-form" @submit.prevent="handleLogin">
         <div class="input-group">
           <label>Email / Username <span class="required">*</span></label>
+          <!-- ВИПРАВЛЕННЯ #7: v-model="identifier" замість v-model="email" -->
           <input
             type="text"
-            v-model="email"
+            v-model="identifier"
             class="input-base"
-            placeholder="example@mail.com"
+            placeholder="example@mail.com or username"
           />
         </div>
 
@@ -62,12 +64,14 @@ const handleLogin = async () => {
               class="input-base"
               placeholder="••••••••"
             />
-            <span class="eye-icon" @click="showPassword = !showPassword">
+            <!-- ВИПРАВЛЕННЯ #6: @mousedown.prevent замість @click -->
+            <span class="eye-icon" @mousedown.prevent="showPassword = !showPassword">
               {{ showPassword ? '🙈' : '👁️' }}
             </span>
           </div>
           <div class="forgot-wrapper">
-            <a href="#" class="forgot-link">Forgot password?</a>
+            <!-- ВИПРАВЛЕННЯ #8: router-link замість <a href="#"> -->
+            <router-link to="/forgot-password" class="forgot-link">Forgot password?</router-link>
           </div>
         </div>
 

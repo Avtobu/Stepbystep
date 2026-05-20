@@ -29,11 +29,6 @@ onMounted(async () => {
     const res = await fetch(`/api/decks/${deckId}/cards`, { credentials: 'include' })
     const json = await res.json()
     if (json.success) {
-      // Each card has: id, question, answer
-      // For True/Wrong gameplay — we treat the card as a statement;
-      // isCorrect is always "true" (the answer exists), user guesses if they know it.
-      // If you want true/false cards, add an `is_correct` field to your Card model.
-      // For now: user guesses True/False, we show the answer on the back.
       cards.value = json.data
     } else {
       error.value = json.error || 'Failed to load cards.'
@@ -63,14 +58,19 @@ const syncProgress = async () => {
   }
 }
 
+// ВИПРАВЛЕННЯ #9: порівнюємо вибір юзера з реальною відповіддю картки
 const guess = (userSaidCorrect) => {
   if (isFlipped.value) return
 
   userGuess.value = userSaidCorrect
-  // In this flow the card's "answer" is the truth — if user said "Correct" we mark it correct
-  // You can change this logic if cards have a boolean field
-  isCorrectGuess.value = userSaidCorrect
-  if (userSaidCorrect) correctCount.value++
+
+  // Реальна відповідь картки: 'correct' = true, 'wrong' = false
+  const cardIsCorrect = currentCard.value.answer === 'correct'
+
+  // Юзер правий якщо його вибір співпадає з відповіддю картки
+  isCorrectGuess.value = userSaidCorrect === cardIsCorrect
+
+  if (isCorrectGuess.value) correctCount.value++
   studiedCount.value++
 
   isFlipped.value = true
