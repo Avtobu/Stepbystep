@@ -224,12 +224,12 @@ def api_get_decks():
             "description": deck.description,
             "card_count": deck.card_count(),
             "cards_studied": p.cards_studied if p else 0,
+            "cards_correct": p.cards_correct if p else 0,
             "completion_percent": p.completion_percent() if p else 0,
             "updated_at": deck.updated_at.isoformat(),
         })
 
     return api_ok(result)
-
 
 @api_bp.route("/decks", methods=["POST"])
 @login_required

@@ -9,8 +9,10 @@ const error = ref(null)
 
 const overallCorrect = computed(() => {
   if (!decks.value.length) return 0
-  const total = decks.value.reduce((sum, d) => sum + d.completion_percent, 0)
-  return Math.round(total / decks.value.length)
+  const totalStudied = decks.value.reduce((sum, d) => sum + d.cards_studied, 0)
+  const totalCorrect = decks.value.reduce((sum, d) => sum + (d.cards_correct || 0), 0)
+  if (totalStudied === 0) return 0
+  return Math.round((totalCorrect / totalStudied) * 100)
 })
 
 const formatDate = (isoString) => {

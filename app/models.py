@@ -113,10 +113,9 @@ class StudyProgress(db.Model):
     __table_args__ = (db.UniqueConstraint("user_id", "deck_id", name="unique_user_deck"),)
 
     def completion_percent(self):
-        total = self.deck.card_count()
-        if total == 0:
+        if self.cards_studied == 0:
             return 0
-        return min(round((self.cards_studied / total) * 100), 100)
+        return min(round((self.cards_correct / self.cards_studied) * 100), 100)
 
     def __repr__(self):
         return f"<StudyProgress user={self.user_id} deck={self.deck_id}>"
