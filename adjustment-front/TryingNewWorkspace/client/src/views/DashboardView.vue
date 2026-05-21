@@ -356,4 +356,69 @@ function formatRelativeTime(isoString) {
   color: white;
   transform: scale(1.1);
 }
+.mascot-placeholder {
+  background-color: var(--color-primary);
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 8px 20px rgba(140, 82, 255, 0.45);
+  transform: rotate(-10deg);
+  transition: transform 0.3s ease;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.mascot-placeholder:hover {
+  transform: rotate(0deg) scale(1.05);
+}
+
+.owl-icon {
+  font-size: 1.8rem;
+  line-height: 1;
+  display: block;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  text-decoration: none;
+}
+
+.logo-title {
+  font-family: 'Inter', 'Montserrat', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  color: var(--color-text);
+  margin: 0;
+  line-height: 1;
+}
+
+.logo-subtitle {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #6C4AB6;
+}
+
+.logo-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.profile-icon {
+  color: var(--color-text);
+  text-decoration: none;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.profile-icon:hover {
+  opacity: 1;
+}
 </style>
