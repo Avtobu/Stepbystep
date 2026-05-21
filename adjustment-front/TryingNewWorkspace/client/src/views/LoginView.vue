@@ -7,15 +7,14 @@ const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
 
-// ВИПРАВЛЕННЯ #7: перейменовано з email на identifier щоб підтримувати і username і email
-const identifier = ref('')
+const email = ref('')
 const password = ref('')
 const errorMsg = ref('')
 const showPassword = ref(false)
 
 const handleLogin = async () => {
   errorMsg.value = ''
-  const result = await auth.login(identifier.value, password.value)
+  const result = await auth.login(email.value, password.value)
 
   if (result === '2fa') {
     router.push({ name: 'two-factor-auth' })
@@ -45,13 +44,12 @@ const handleLogin = async () => {
 
       <form class="auth-form" @submit.prevent="handleLogin">
         <div class="input-group">
-          <label>Email / Username <span class="required">*</span></label>
-          <!-- ВИПРАВЛЕННЯ #7: v-model="identifier" замість v-model="email" -->
+          <label>Email <span class="required">*</span></label>
           <input
-            type="text"
-            v-model="identifier"
+            type="email"
+            v-model="email"
             class="input-base"
-            placeholder="example@mail.com or username"
+            placeholder="example@mail.com"
           />
         </div>
 
@@ -64,13 +62,11 @@ const handleLogin = async () => {
               class="input-base"
               placeholder="••••••••"
             />
-            <!-- ВИПРАВЛЕННЯ #6: @mousedown.prevent замість @click -->
             <span class="eye-icon" @mousedown.prevent="showPassword = !showPassword">
               {{ showPassword ? '🙈' : '👁️' }}
             </span>
           </div>
           <div class="forgot-wrapper">
-            <!-- ВИПРАВЛЕННЯ #8: router-link замість <a href="#"> -->
             <router-link to="/forgot-password" class="forgot-link">Forgot password?</router-link>
           </div>
         </div>
@@ -101,12 +97,8 @@ const handleLogin = async () => {
   margin-bottom: 2rem;
   transition: transform 0.2s ease;
 }
-.auth-logo:hover {
-  transform: scale(1.02);
-}
-.auth-logo:hover .mascot-placeholder {
-  transform: rotate(0deg) scale(1.08);
-}
+.auth-logo:hover { transform: scale(1.02); }
+.auth-logo:hover .mascot-placeholder { transform: rotate(0deg) scale(1.08); }
 .auth-container {
   display: flex;
   justify-content: center;
@@ -137,12 +129,8 @@ const handleLogin = async () => {
   margin-bottom: 0.5rem;
   font-weight: bold;
 }
-.required {
-  color: var(--color-error);
-}
-.password-wrapper {
-  position: relative;
-}
+.required { color: var(--color-error); }
+.password-wrapper { position: relative; }
 .eye-icon {
   position: absolute;
   right: 15px;
@@ -152,9 +140,7 @@ const handleLogin = async () => {
   opacity: 0.6;
   user-select: none;
 }
-.eye-icon:hover {
-  opacity: 1;
-}
+.eye-icon:hover { opacity: 1; }
 .forgot-wrapper {
   text-align: left;
   margin-top: 0.5rem;
@@ -183,10 +169,7 @@ const handleLogin = async () => {
   text-align: center;
   margin-bottom: 0.5rem;
 }
-.actions {
-  display: flex;
-  justify-content: center;
-}
+.actions { display: flex; justify-content: center; }
 .switch-auth {
   text-align: center;
   margin-top: 1rem;
@@ -197,7 +180,5 @@ const handleLogin = async () => {
   font-weight: bold;
   text-decoration: none;
 }
-.switch-auth a:hover {
-  text-decoration: underline;
-}
+.switch-auth a:hover { text-decoration: underline; }
 </style>

@@ -29,30 +29,29 @@ export const cardsApi = {
 
 // ── USER ─────────────────────────────────────────────────────────────
 export const userApi = {
-  /** GET /api/me */
   getMe: () => api.get('/me'),
-
-  /** PUT /api/user/:id — оновити нікнейм (без підтвердження) */
   updateUsername: (userId, username) =>
     api.put(`/user/${userId}`, { username }),
 
-  // ── EMAIL CHANGE (з підтвердженням кодом на нову пошту) ──
-  /** POST /api/user/:id/email/request-change — надіслати код на нову пошту */
+  // ── EMAIL CHANGE ──
   requestEmailChange: (userId, newEmail) =>
     api.post(`/user/${userId}/email/request-change`, { new_email: newEmail }),
-
-  /** POST /api/user/:id/email/confirm-change — підтвердити код і змінити пошту */
   confirmEmailChange: (userId, newEmail, code) =>
     api.post(`/user/${userId}/email/confirm-change`, { new_email: newEmail, code }),
 
-  // ── PASSWORD CHANGE (з підтвердженням кодом на поточну пошту) ──
-  /** POST /api/user/:id/send-change-password-code — надіслати код на поточну пошту */
+  // ── PASSWORD CHANGE (авторизований користувач) ──
   sendPasswordCode: (userId) =>
     api.post(`/user/${userId}/send-change-password-code`),
-
-  /** POST /api/user/:id/change-password — підтвердити код і змінити пароль */
   changePassword: (userId, code, newPassword) =>
     api.post(`/user/${userId}/change-password`, { code, password: newPassword }),
+
+  // ── PASSWORD RESET (forgot password) ──
+  sendPasswordResetCode: (email) =>
+    api.post('/forgot-password/send-code', { email }),
+  verifyPasswordResetCode: (email, code) =>
+    api.post('/forgot-password/verify-code', { email, code }),
+  resetPassword: (email, code, newPassword) =>
+    api.post('/forgot-password/reset', { email, code, password: newPassword }),
 
   // ── 2FA ──
   send2faCode: (userId) => api.post(`/user/${userId}/2fa/send-code`),

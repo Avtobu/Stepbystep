@@ -12,9 +12,11 @@ const password = ref('')
 const confirmPassword = ref('')
 const passwordStrength = ref('')
 const errorMsg = ref('')
-const verifyCode = ref('')
 const showPassword = ref(false)
 const showConfirmPassword = ref(false)
+
+// ✅ ЗМІНЕНО: масив з 6 цифр замість одного рядка
+const code = ref(['', '', '', '', '', ''])
 
 const checkPassword = () => {
   if (password.value.length === 0) {
@@ -42,9 +44,37 @@ const handleRegister = async () => {
   }
 }
 
+// ✅ ДОДАНО: обробники для квадратиків
+const handleCodeInput = (index, event) => {
+  const value = event.target.value.replace(/\D/g, '')
+  code.value[index] = value.slice(-1)
+  if (value && index < 5) {
+    document.getElementById(`signup-code-${index + 1}`)?.focus()
+  }
+}
+
+const handleKeyDown = (index, event) => {
+  if (event.key === 'Backspace' && !code.value[index] && index > 0) {
+    document.getElementById(`signup-code-${index - 1}`)?.focus()
+  }
+}
+
+const handlePaste = (event) => {
+  event.preventDefault()
+  const pasted = event.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
+  pasted.split('').forEach((char, i) => { code.value[i] = char })
+  const lastIdx = Math.min(pasted.length, 5)
+  document.getElementById(`signup-code-${lastIdx}`)?.focus()
+}
+
 const handleVerifyEmail = async () => {
   errorMsg.value = ''
-  const ok = await auth.verifyEmail(verifyCode.value)
+  const fullCode = code.value.join('')
+  if (fullCode.length < 6) {
+    errorMsg.value = 'Enter all 6 digits'
+    return
+  }
+  const ok = await auth.verifyEmail(fullCode)
   if (ok) {
     router.push('/login')
   } else {
@@ -102,7 +132,6 @@ const handleVerifyEmail = async () => {
                 @input="checkPassword"
                 placeholder="••••••••"
               />
-              <!-- ВИПРАВЛЕННЯ #6: @mousedown.prevent замість @click -->
               <span class="eye-icon" @mousedown.prevent="showPassword = !showPassword">
                 {{ showPassword ? '🙈' : '👁️' }}
               </span>
@@ -120,7 +149,6 @@ const handleVerifyEmail = async () => {
                 class="input-base"
                 placeholder="••••••••"
               />
-              <!-- ВИПРАВЛЕННЯ #6: @mousedown.prevent замість @click -->
               <span class="eye-icon" @mousedown.prevent="showConfirmPassword = !showConfirmPassword">
                 {{ showConfirmPassword ? '🙈' : '👁️' }}
               </span>
@@ -149,13 +177,23 @@ const handleVerifyEmail = async () => {
         <form class="auth-form" @submit.prevent="handleVerifyEmail">
           <div class="input-group">
             <label>Verification Code <span class="required">*</span></label>
-            <input
-              type="text"
-              v-model="verifyCode"
-              class="input-base"
-              placeholder="123456"
-              autocomplete="one-time-code"
-            />
+
+            <!-- ✅ ЗМІНЕНО: квадратики замість одного поля -->
+            <div class="code-inputs">
+              <input
+                v-for="(digit, idx) in code"
+                :key="idx"
+                :id="'signup-code-' + idx"
+                type="text"
+                inputmode="numeric"
+                maxlength="1"
+                v-model="code[idx]"
+                @input="handleCodeInput(idx, $event)"
+                @keydown="handleKeyDown(idx, $event)"
+                @paste="handlePaste"
+                class="digit-box"
+              />
+            </div>
           </div>
 
           <p v-if="errorMsg" class="error-msg">{{ errorMsg }}</p>
@@ -277,5 +315,25 @@ const handleVerifyEmail = async () => {
   color: var(--color-text-light);
   margin-bottom: 1.5rem;
   line-height: 1.5;
+}
+/* ✅ ДОДАНО: стилі для квадратиків */
+.code-inputs {
+  display: flex;
+  gap: 0.8rem;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+.digit-box {
+  width: 50px;
+  height: 50px;
+  text-align: center;
+  font-size: 1.5rem;
+  font-family: 'Inter', sans-serif;
+  border: 1px solid #CCCCCC;
+  border-radius: 8px;
+  outline: none;
+}
+.digit-box:focus {
+  border-color: var(--color-primary);
 }
 </style>

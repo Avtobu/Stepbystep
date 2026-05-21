@@ -48,8 +48,6 @@ const handleResend = async () => {
   try {
     const userId = authStore.user?.id ?? authStore.pendingUserId
     if (isLoginFlow) {
-      // При логіні код вже відправлений бекендом — просто рестартуємо таймер
-      // або можна зробити окремий endpoint для resend
       startTimer()
     } else if (isDisableFlow) {
       await userApi.sendDisable2faCode(userId)
@@ -103,12 +101,29 @@ const handleSendLetter = async () => {
   }
 }
 
+// ✅ ВИПРАВЛЕНО: фільтрує нецифри, переводить фокус вперед
 const handleCodeInput = (index, event) => {
-  const value = event.target.value
+  const value = event.target.value.replace(/\D/g, '')
+  code.value[index] = value.slice(-1)
   if (value && index < 5) {
-    const nextInput = document.getElementById(`code-input-${index + 1}`)
-    if (nextInput) nextInput.focus()
+    document.getElementById(`code-input-${index + 1}`)?.focus()
   }
+}
+
+// ✅ ДОДАНО: backspace переводить фокус назад
+const handleKeyDown = (index, event) => {
+  if (event.key === 'Backspace' && !code.value[index] && index > 0) {
+    document.getElementById(`code-input-${index - 1}`)?.focus()
+  }
+}
+
+// ✅ ДОДАНО: вставка коду з буфера
+const handlePaste = (event) => {
+  event.preventDefault()
+  const pasted = event.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
+  pasted.split('').forEach((char, i) => { code.value[i] = char })
+  const lastIdx = Math.min(pasted.length, 5)
+  document.getElementById(`code-input-${lastIdx}`)?.focus()
 }
 
 const handleVerify = async () => {
@@ -195,9 +210,12 @@ const handleVerify = async () => {
             :key="idx"
             :id="'code-input-' + idx"
             type="text"
+            inputmode="numeric"
             maxlength="1"
             v-model="code[idx]"
             @input="handleCodeInput(idx, $event)"
+            @keydown="handleKeyDown(idx, $event)"
+            @paste="handlePaste"
             class="digit-box"
           />
         </div>

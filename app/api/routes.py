@@ -231,6 +231,83 @@ def api_get_decks():
 
     return api_ok(result)
 
+# ─────────────────────────────────────────────
+#  Password reset (forgot password)
+# ─────────────────────────────────────────────
+
+@api_bp.route("/forgot-password/send-code", methods=["POST"])
+@csrf.exempt
+def api_forgot_password_send_code():
+    """Відправити код скидання пароля на email."""
+    body = request.get_json()
+    if not body:
+        return api_error("JSON body required.")
+    email = body.get("email", "").strip().lower()
+    if not email:
+        return api_error("Email is required.")
+    user = User.query.filter_by(email=email).first()
+    # Не розкриваємо чи існує акаунт
+    if not user or not user.is_verified:
+        return api_ok(message="If this email is registered, you will receive a code.")
+    try:
+        code = EmailCode.create_for_user(user, purpose="reset_password")
+        send_verification_code(user, code.code, purpose="reset_password")
+        return api_ok(message="If this email is registered, you will receive a code.")
+    except Exception as e:
+        db.session.rollback()
+        return api_error(str(e), 500)
+
+
+@api_bp.route("/forgot-password/verify-code", methods=["POST"])
+@csrf.exempt
+def api_forgot_password_verify_code():
+    """Перевірити код скидання пароля."""
+    body = request.get_json()
+    if not body:
+        return api_error("JSON body required.")
+    email = body.get("email", "").strip().lower()
+    code_input = body.get("code", "").strip()
+    if not email or not code_input:
+        return api_error("email and code are required.")
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        return api_error("Invalid or expired code.")
+    code_record = EmailCode.query.filter_by(
+        user_id=user.id, purpose="reset_password", is_used=False
+    ).order_by(EmailCode.created_at.desc()).first()
+    if not code_record or not code_record.is_valid() or code_record.code != code_input:
+        return api_error("Invalid or expired code.")
+    return api_ok(message="Code verified.")
+
+
+@api_bp.route("/forgot-password/reset", methods=["POST"])
+@csrf.exempt
+def api_forgot_password_reset():
+    """Встановити новий пароль після підтвердження коду."""
+    body = request.get_json()
+    if not body:
+        return api_error("JSON body required.")
+    email = body.get("email", "").strip().lower()
+    code_input = body.get("code", "").strip()
+    new_password = body.get("password", "").strip()
+    if not email or not code_input or not new_password:
+        return api_error("email, code and password are required.")
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        return api_error("Invalid or expired code.")
+    code_record = EmailCode.query.filter_by(
+        user_id=user.id, purpose="reset_password", is_used=False
+    ).order_by(EmailCode.created_at.desc()).first()
+    if not code_record or not code_record.is_valid() or code_record.code != code_input:
+        return api_error("Invalid or expired code.")
+    errors = validate_password_strength(new_password)
+    if errors:
+        return api_error(" ".join(errors) if isinstance(errors, list) else errors)
+    code_record.is_used = True
+    user.set_password(new_password)
+    db.session.commit()
+    return api_ok(message="Password reset successfully.")
+
 @api_bp.route("/decks", methods=["POST"])
 @login_required
 @csrf.exempt

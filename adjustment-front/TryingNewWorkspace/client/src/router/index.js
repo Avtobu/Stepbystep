@@ -11,6 +11,7 @@ import CreateDeckView from '../views/CreateDeckView.vue'
 import ManageDeckView from '../views/ManageDeckView.vue'
 import StudyView from '../views/StudyView.vue'
 import StudySuccessView from '../views/StudySuccessView.vue'
+import ForgotPasswordView from '../views/ForgotPasswordView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -34,10 +35,15 @@ const router = createRouter({
       meta: { guestOnly: true }
     },
     {
+      path: '/forgot-password',
+      name: 'forgot-password',
+      component: ForgotPasswordView,
+      meta: { guestOnly: true }
+    },
+    {
       path: '/cabinet/2fa',
       name: 'two-factor-auth',
       component: TwoFactorAuthView,
-      // без requiresAuth — guard сам перевіряє pendingUserId
     },
     // ── Protected routes ────────────────────────────────────────────
     {
@@ -98,23 +104,18 @@ const router = createRouter({
 router.beforeEach(async (to) => {
   const { useAuthStore } = await import('../stores/auth')
   const auth = useAuthStore()
-
   if (!auth.sessionChecked) {
     await auth.fetchMe()
   }
-
-  // Дозволити /cabinet/2fa тільки якщо є pendingUserId або юзер авторизований
   if (to.name === 'two-factor-auth') {
     if (!auth.pendingUserId && !auth.isAuthenticated) {
       return { name: 'login' }
     }
     return true
   }
-
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
     return { name: 'login', query: { redirect: to.fullPath } }
   }
-
   if (to.meta.guestOnly && auth.isAuthenticated) {
     return { name: 'dashboard' }
   }
